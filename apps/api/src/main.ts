@@ -9,6 +9,12 @@ import { auth } from './auth/auth.js';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
 
+  // CORS doit etre active avant tout handler pour couvrir aussi /api/auth/* et le preflight OPTIONS.
+  const corsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173')
+    .split(',')
+    .map((origin) => origin.trim());
+  app.enableCors({ origin: corsOrigins, credentials: true });
+
   // Le handler Better Auth doit lire le corps brut de la requete :
   // il est monte avant les parseurs de corps Express/Nest.
   app.use('/api/auth/*splat', toNodeHandler(auth));

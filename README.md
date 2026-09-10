@@ -122,11 +122,19 @@ npm run dev
 
 Le frontend démarre par défaut sur `http://localhost:5173`.
 
-Pages disponibles (squelette uniquement, données mockées — pas encore d'appel API, voir étape 7) :
-- `/login`, `/register` — pages d'authentification autonomes (sans barre latérale)
-- `/explorer` — explorateur de fichiers dans le layout principal (barre latérale + zone de contenu) ; `/` redirige vers `/explorer`
+Pages disponibles :
+- `/login`, `/register` — formulaires connectés à l'API Better Auth (voir ci-dessous), sans barre latérale
+- `/explorer` — protégée : redirige vers `/login` si aucune session valide ; contenu encore mocké (le câblage réel fichiers/dossiers est prévu à l'étape 8)
 
 Système de CSS vanilla dans `apps/web/src/styles/` (`variables.css` pour les tokens de design, `reset.css`, `base.css`, `layout.css`, `explorer.css`), avec support clair/sombre automatique via `prefers-color-scheme`.
+
+#### Authentification côté frontend (étape 7)
+
+Le frontend utilise le client React de Better Auth (`apps/web/src/lib/auth-client.ts`, `baseURL` = `VITE_API_URL`). Important pour le développement local :
+
+- **CORS** : l'API (`apps/api/.env`) doit lister l'origine du frontend dans `CORS_ORIGIN` (séparées par des virgules si Vite change de port, ex. `http://localhost:5173,http://localhost:5174`). Sans ça, le navigateur bloque les requêtes cross-origin et les cookies de session ne circulent pas.
+- Les deux serveurs (API sur `:3000`, frontend sur `:5173`/`:5174`) doivent tourner en même temps pour que l'inscription/connexion fonctionnent réellement depuis l'UI.
+- Route protégée : `RequireAuth` (`apps/web/src/components/RequireAuth.tsx`) vérifie la session via `useSession()` et redirige vers `/login` si absente. Déconnexion via le bouton dans la barre latérale.
 
 ### Lancer les deux en parallèle
 
@@ -134,4 +142,4 @@ Ouvrir deux terminaux et lancer chaque commande `npm run start:dev` / `npm run d
 
 ## État du projet
 
-Le développement suit une feuille de route par étapes (voir le fichier de suivi local, non versionné). Étape actuelle : **Étape 6 — Frontend : squelette React + routing + design system CSS**.
+Le développement suit une feuille de route par étapes (voir le fichier de suivi local, non versionné). Étape actuelle : **Étape 7 — Frontend : intégration authentification**.

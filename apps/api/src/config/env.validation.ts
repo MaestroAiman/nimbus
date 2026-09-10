@@ -7,4 +7,5 @@ export const envValidationSchema = Joi.object({
   BETTER_AUTH_SECRET: Joi.string().min(32).required(),
   BETTER_AUTH_URL: Joi.string().uri().default('http://localhost:3000'),
   STORAGE_PATH: Joi.string().default('./storage'),
+  CORS_ORIGIN: Joi.string().default('http://localhost:5173,http://localhost:5174'),
 });

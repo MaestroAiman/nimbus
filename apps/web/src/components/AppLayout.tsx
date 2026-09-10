@@ -1,8 +1,17 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { signOut, useSession } from '../lib/auth-client';
 
 const NAV_ITEMS = [{ to: '/explorer', label: 'Mes fichiers' }];
 
 export function AppLayout() {
+  const navigate = useNavigate();
+  const { data: session } = useSession();
+
+  async function handleSignOut() {
+    await signOut();
+    navigate('/login', { replace: true });
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -18,6 +27,12 @@ export function AppLayout() {
             </NavLink>
           ))}
         </nav>
+        <div className="sidebar__footer">
+          {session && <p className="sidebar__user">{session.user.name}</p>}
+          <button type="button" className="button button--secondary" onClick={handleSignOut}>
+            Se déconnecter
+          </button>
+        </div>
       </aside>
       <main className="app-main">
         <Outlet />
