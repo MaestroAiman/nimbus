@@ -42,6 +42,18 @@ L'API démarre par défaut sur `http://localhost:3000`, se connecte à PostgreSQ
 
 > Si `npm install` échoue avec l'erreur `Cannot read properties of null (reading 'edgesOut')`, c'est un bug connu de la résolution de dépendances d'npm (arborist) sur cette combinaison de paquets. Contournement : `npm install --legacy-peer-deps`.
 
+#### Base de données : migrations et seed
+
+Une fois PostgreSQL démarré (voir ci-dessus) et les dépendances installées :
+
+```bash
+cd apps/api
+npm run db:migrate   # applique les migrations SQL (src/db/migrations) sur la base
+npm run db:seed       # insère un utilisateur de test (seed-test-user / test@nimbus.local)
+```
+
+Si le schéma (`src/db/schema/`) est modifié, régénérer la migration avec `npm run db:generate` avant de la rejouer avec `db:migrate`.
+
 ### Frontend (`apps/web`)
 
 ```bash
@@ -59,4 +71,4 @@ Ouvrir deux terminaux et lancer chaque commande `npm run start:dev` / `npm run d
 
 ## État du projet
 
-Le développement suit une feuille de route par étapes (voir le fichier de suivi local, non versionné). Étape actuelle : **Étape 2 — Backend : squelette NestJS + configuration**.
+Le développement suit une feuille de route par étapes (voir le fichier de suivi local, non versionné). Étape actuelle : **Étape 3 — Base de données : schéma Drizzle + migrations**.
