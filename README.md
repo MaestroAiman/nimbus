@@ -54,6 +54,31 @@ npm run db:seed       # insère un utilisateur de test (seed-test-user / test@ni
 
 Si le schéma (`src/db/schema/`) est modifié, régénérer la migration avec `npm run db:generate` avant de la rejouer avec `db:migrate`.
 
+#### Authentification (Better Auth)
+
+Endpoints exposés par Better Auth sous `/api/auth/*` (inscription, connexion, déconnexion, session) :
+
+```bash
+# Inscription
+curl -X POST http://localhost:3000/api/auth/sign-up/email \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alice@nimbus.local","password":"correct-horse-battery","name":"Alice"}'
+
+# Connexion (récupère le cookie de session)
+curl -c cookies.txt -X POST http://localhost:3000/api/auth/sign-in/email \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alice@nimbus.local","password":"correct-horse-battery"}'
+
+# Route protégée ("qui suis-je")
+curl -b cookies.txt http://localhost:3000/auth/me   # 200 avec la session
+curl http://localhost:3000/auth/me                   # 401 sans cookie
+
+# Déconnexion (nécessite un en-tête Origin, comme un vrai navigateur)
+curl -b cookies.txt -H "Origin: http://localhost:3000" -X POST http://localhost:3000/api/auth/sign-out
+```
+
+Ce flux complet (inscription/connexion/route protégée/refus sans session/déconnexion) est aussi couvert par un test automatisé : `apps/api/test/auth.e2e-spec.ts` (lancé via `npm run test:e2e`).
+
 ### Frontend (`apps/web`)
 
 ```bash
@@ -71,4 +96,4 @@ Ouvrir deux terminaux et lancer chaque commande `npm run start:dev` / `npm run d
 
 ## État du projet
 
-Le développement suit une feuille de route par étapes (voir le fichier de suivi local, non versionné). Étape actuelle : **Étape 3 — Base de données : schéma Drizzle + migrations**.
+Le développement suit une feuille de route par étapes (voir le fichier de suivi local, non versionné). Étape actuelle : **Étape 4 — Authentification (Better Auth) de bout en bout**.
