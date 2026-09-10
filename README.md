@@ -122,10 +122,16 @@ npm run dev
 
 Le frontend démarre par défaut sur `http://localhost:5173`.
 
+Pages disponibles (squelette uniquement, données mockées — pas encore d'appel API, voir étape 7) :
+- `/login`, `/register` — pages d'authentification autonomes (sans barre latérale)
+- `/explorer` — explorateur de fichiers dans le layout principal (barre latérale + zone de contenu) ; `/` redirige vers `/explorer`
+
+Système de CSS vanilla dans `apps/web/src/styles/` (`variables.css` pour les tokens de design, `reset.css`, `base.css`, `layout.css`, `explorer.css`), avec support clair/sombre automatique via `prefers-color-scheme`.
+
 ### Lancer les deux en parallèle
 
 Ouvrir deux terminaux et lancer chaque commande `npm run start:dev` / `npm run dev` ci-dessus séparément.
 
 ## État du projet
 
-Le développement suit une feuille de route par étapes (voir le fichier de suivi local, non versionné). Étape actuelle : **Étape 5 — API fichiers & dossiers (CRUD, upload, download)**.
+Le développement suit une feuille de route par étapes (voir le fichier de suivi local, non versionné). Étape actuelle : **Étape 6 — Frontend : squelette React + routing + design system CSS**.
