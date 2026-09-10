@@ -1,3 +1,4 @@
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import express from 'express';
 import { toNodeHandler } from 'better-auth/node';
@@ -16,6 +17,7 @@ async function bootstrap() {
   app.use(express.urlencoded({ extended: true }));
 
   app.useGlobalFilters(new AllExceptionsFilter());
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }));
   await app.listen(process.env.PORT ?? 3000);
 }
 await bootstrap();

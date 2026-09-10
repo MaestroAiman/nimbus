@@ -6,4 +6,5 @@ export const envValidationSchema = Joi.object({
   DATABASE_URL: Joi.string().uri({ scheme: ['postgres', 'postgresql'] }).required(),
   BETTER_AUTH_SECRET: Joi.string().min(32).required(),
   BETTER_AUTH_URL: Joi.string().uri().default('http://localhost:3000'),
+  STORAGE_PATH: Joi.string().default('./storage'),
 });

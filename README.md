@@ -79,6 +79,38 @@ curl -b cookies.txt -H "Origin: http://localhost:3000" -X POST http://localhost:
 
 Ce flux complet (inscription/connexion/route protégée/refus sans session/déconnexion) est aussi couvert par un test automatisé : `apps/api/test/auth.e2e-spec.ts` (lancé via `npm run test:e2e`).
 
+#### Dossiers et fichiers
+
+Toutes les routes ci-dessous nécessitent le cookie de session obtenu après connexion (voir ci-dessus). Les fichiers sont stockés sur disque sous `STORAGE_PATH` (`./storage` en local par défaut, non versionné) — seule la métadonnée (nom, taille, type, chemin) est en base.
+
+```bash
+# Creer un dossier a la racine
+curl -b cookies.txt -X POST http://localhost:3000/folders \
+  -H "Content-Type: application/json" -d '{"name":"Documents"}'
+
+# Lister le contenu de la racine (folderId omis) ou d'un dossier (?parentId=<id>)
+curl -b cookies.txt http://localhost:3000/folders
+curl -b cookies.txt "http://localhost:3000/folders?parentId=<id-du-dossier>"
+
+# Renommer / deplacer un dossier (parentId: null pour remonter a la racine)
+curl -b cookies.txt -X PATCH http://localhost:3000/folders/<id> \
+  -H "Content-Type: application/json" -d '{"name":"Nouveau nom"}'
+
+# Uploader un fichier (streame directement sur le disque, sans buffering complet en RAM)
+curl -b cookies.txt -X POST http://localhost:3000/files \
+  -F "folderId=<id-du-dossier>" -F "file=@/chemin/vers/mon-fichier.pdf"
+
+# Telecharger
+curl -b cookies.txt -o fichier-telecharge.pdf http://localhost:3000/files/<id>/download
+
+# Deplacer / renommer / supprimer un fichier
+curl -b cookies.txt -X PATCH http://localhost:3000/files/<id> \
+  -H "Content-Type: application/json" -d '{"folderId":null}'
+curl -b cookies.txt -X DELETE http://localhost:3000/files/<id>
+```
+
+Un utilisateur ne peut ni voir, ni modifier, ni supprimer les dossiers/fichiers d'un autre utilisateur (404 sinon). Couverture automatisée : `apps/api/test/files-folders.e2e-spec.ts` (arborescence, upload d'un fichier de plusieurs dizaines de Mo, téléchargement, déplacement, suppression, prévention des cycles de dossiers, isolation entre utilisateurs).
+
 ### Frontend (`apps/web`)
 
 ```bash
@@ -96,4 +128,4 @@ Ouvrir deux terminaux et lancer chaque commande `npm run start:dev` / `npm run d
 
 ## État du projet
 
-Le développement suit une feuille de route par étapes (voir le fichier de suivi local, non versionné). Étape actuelle : **Étape 4 — Authentification (Better Auth) de bout en bout**.
+Le développement suit une feuille de route par étapes (voir le fichier de suivi local, non versionné). Étape actuelle : **Étape 5 — API fichiers & dossiers (CRUD, upload, download)**.

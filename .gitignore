@@ -25,6 +25,9 @@ apps/web/.vite/
 apps/api/dist/
 apps/api/*.tsbuildinfo
 
+# Fichiers uploades (donnees locales de dev, pas du code)
+apps/api/storage/
+
 # OS / IDE
 .DS_Store
 Thumbs.db

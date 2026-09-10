@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { Pool } from 'pg';
 import { createDb } from './client.js';
 import { users } from './schema/index.js';
 
@@ -8,7 +9,7 @@ async function seed() {
     throw new Error('DATABASE_URL manquant');
   }
 
-  const db = createDb(databaseUrl);
+  const db = createDb(new Pool({ connectionString: databaseUrl }));
 
   await db
     .insert(users)
