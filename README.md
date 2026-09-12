@@ -124,7 +124,7 @@ Le frontend démarre par défaut sur `http://localhost:5173`.
 
 Pages disponibles :
 - `/login`, `/register` — formulaires connectés à l'API Better Auth (voir ci-dessous), sans barre latérale
-- `/explorer` — protégée : redirige vers `/login` si aucune session valide ; contenu encore mocké (le câblage réel fichiers/dossiers est prévu à l'étape 8)
+- `/explorer` — protégée : redirige vers `/login` si aucune session valide ; navigation dans l'arborescence, création de dossier, envoi/téléchargement/renommage/suppression de fichiers et dossiers, câblés sur l'API réelle (étape 8)
 
 Système de CSS vanilla dans `apps/web/src/styles/` (`variables.css` pour les tokens de design, `reset.css`, `base.css`, `layout.css`, `explorer.css`), avec support clair/sombre automatique via `prefers-color-scheme`.
 
@@ -142,4 +142,4 @@ Ouvrir deux terminaux et lancer chaque commande `npm run start:dev` / `npm run d
 
 ## État du projet
 
-Le développement suit une feuille de route par étapes (voir le fichier de suivi local, non versionné). Étape actuelle : **Étape 7 — Frontend : intégration authentification**.
+Le développement suit une feuille de route par étapes (voir le fichier de suivi local, non versionné). Étape actuelle : **Étape 8 — Frontend : câblage réel de l'explorateur de fichiers**.
