@@ -21,5 +21,50 @@ services:
       timeout: 5s
       retries: 10
 
+  # Conteneur de dev pour l'API avec hot-reload (tsx watch, voir apps/api/Dockerfile).
+  # Alternative optionnelle a `npm run start:dev` lance directement sur l'hote (README) :
+  # utile pour developper sans installer Node localement, ou pour tester le Dockerfile.
+  api:
+    build:
+      context: ../apps/api
+      target: dev
+    restart: unless-stopped
+    env_file:
+      - ../apps/api/.env
+    environment:
+      # Depuis le conteneur, Postgres est joignable via le nom de service, pas localhost.
+      DATABASE_URL: postgres://nimbus:nimbus@postgres:5432/nimbus
+      STORAGE_PATH: /app/storage
+      # Les evenements fs natifs ne traversent pas toujours les bind mounts Docker Desktop
+      # sur Windows/Mac : le polling garantit que le hot-reload (tsx watch) fonctionne en
+      # conteneur (voir apps/api/Dockerfile, stage `dev`).
+      CHOKIDAR_USEPOLLING: 'true'
+    ports:
+      - '3000:3000'
+    volumes:
+      - ../apps/api:/app
+      - /app/node_modules
+      - nimbus_api_dev_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Conteneur de dev pour le frontend avec hot-reload (vite dev --host).
+  web:
+    build:
+      context: ../apps/web
+      target: dev
+    restart: unless-stopped
+    env_file:
+      - ../apps/web/.env
+    environment:
+      CHOKIDAR_USEPOLLING: 'true'
+    ports:
+      - '5173:5173'
+    volumes:
+      - ../apps/web:/app
+      - /app/node_modules
+
 volumes:
   nimbus_pg_dev_data:
+  nimbus_api_dev_storage:

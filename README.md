@@ -7,9 +7,9 @@ Application web auto-hébergée de stockage de fichiers ("Google Drive personnel
 ```
 nimbus/
 ├── apps/
-│   ├── api/   # Backend NestJS (TypeScript strict)
-│   └── web/   # Frontend React + Vite
-└── infra/     # Docker Compose, configuration Nginx (à partir de l'étape 9/10)
+│   ├── api/   # Backend NestJS (TypeScript strict) + Dockerfile
+│   └── web/   # Frontend React + Vite + Dockerfile
+└── infra/     # Docker Compose (dev et prod), configuration Nginx (reverse proxy a partir de l'etape 10)
 ```
 
 ## Prérequis
@@ -40,7 +40,7 @@ npm run start:dev
 
 L'API démarre par défaut sur `http://localhost:3000`, se connecte à PostgreSQL au démarrage. Healthcheck : `GET http://localhost:3000/health`.
 
-> Si `npm install` échoue avec l'erreur `Cannot read properties of null (reading 'edgesOut')`, c'est un bug connu de la résolution de dépendances d'npm (arborist) sur cette combinaison de paquets. Contournement : `npm install --legacy-peer-deps`.
+> Si `npm install` échoue avec l'erreur `Cannot read properties of null (reading 'edgesOut')`, c'est un bug connu de la résolution de dépendances d'npm (arborist) sur cette combinaison de paquets. Contournement : `npm install --legacy-peer-deps`. Pour la même raison, `npm ci` échoue aussi de façon fiable sur `apps/api` (deux versions d'`esbuild` coexistent dans l'arbre de dépendances, et npm n'écrit pas systématiquement l'entrée binaire optionnelle correspondante dans `package-lock.json`) : `apps/api/Dockerfile` utilise donc `npm install --legacy-peer-deps` plutôt que `npm ci`.
 
 #### Base de données : migrations et seed
 
@@ -140,6 +140,37 @@ Le frontend utilise le client React de Better Auth (`apps/web/src/lib/auth-clien
 
 Ouvrir deux terminaux et lancer chaque commande `npm run start:dev` / `npm run dev` ci-dessus séparément.
 
+## Avec Docker (étape 9)
+
+Alternative à l'installation locale de Node : tout tourne en conteneurs. Deux fichiers compose dans `infra/`, chacun avec son propre nom de projet Docker (évite toute collision entre les deux) :
+
+### Développement (`docker-compose.dev.yml`, projet `infra`)
+
+```bash
+cd infra
+docker compose -f docker-compose.dev.yml up -d
+```
+
+Démarre Postgres (déjà présent depuis l'étape 2), l'API (`http://localhost:3000`, hot-reload via `tsx watch`) et le frontend (`http://localhost:5173`, hot-reload via Vite HMR), avec le code source de `apps/api` et `apps/web` monté en volume — les modifications faites sur l'hôte sont prises en compte automatiquement. `CHOKIDAR_USEPOLLING` est activé côté conteneurs : sur Windows/Mac, les événements de système de fichiers natifs ne traversent pas toujours les bind mounts Docker Desktop, le polling est nécessaire pour que le rechargement fonctionne réellement (constaté en pratique lors de la mise en place — voir la note technique dans `apps/api/Dockerfile`, stage `dev`). Nécessite `apps/api/.env` et `apps/web/.env` (voir sections ci-dessus).
+
+Cette approche est un complément optionnel à `npm run start:dev` / `npm run dev` lancés directement sur l'hôte (toujours la voie la plus simple au quotidien) — utile pour développer sans installer Node localement, ou pour tester les Dockerfiles.
+
+### Production (`docker-compose.prod.yml`, projet `nimbus-prod`)
+
+Images figées (buildées ici, sur le PC de dev — jamais sur le futur serveur cible), limites mémoire actives par service selon le budget RAM documenté dans le fichier de suivi local (Postgres ~400 Mo, API ~300 Mo, Nginx ~64 Mo). Le frontend est un build Vite statique servi par Nginx (pas de serveur Node en prod).
+
+```bash
+cd infra
+cp .env.prod.example .env.prod   # renseigner un vrai mot de passe Postgres + BETTER_AUTH_SECRET (openssl rand -base64 32)
+docker compose --env-file .env.prod -p nimbus-prod -f docker-compose.prod.yml up -d --build
+```
+
+Ordre de démarrage géré automatiquement : Postgres → migrations Drizzle (conteneur `migrate`, one-shot, images buildées avec les devDependencies pour garder l'image `api` finale minimale) → API → frontend. Par défaut : API sur `http://localhost:3000`, frontend sur `http://localhost:8080`.
+
+> **Limite connue, à revoir à l'étape 10 :** le frontend appelle l'API sur une origine séparée (`VITE_API_URL`, compilée en dur dans le bundle au build). Une fois Nginx configuré en reverse proxy unique servant `/api/*` sur la même origine que le frontend (étape 10), cette variable pourra être supprimée au profit de chemins relatifs.
+
+Pour arrêter et nettoyer : `docker compose --env-file .env.prod -p nimbus-prod -f docker-compose.prod.yml down` (ajouter `-v` pour supprimer aussi les volumes Postgres/stockage).
+
 ## État du projet
 
-Le développement suit une feuille de route par étapes (voir le fichier de suivi local, non versionné). Étape actuelle : **Étape 8 — Frontend : câblage réel de l'explorateur de fichiers**.
+Le développement suit une feuille de route par étapes (voir le fichier de suivi local, non versionné). Étape actuelle : **Étape 9 — Dockerisation dev + prod**.

@@ -12,6 +12,7 @@ pnpm-debug.log*
 .env
 .env.local
 .env.*.local
+infra/.env.prod
 
 # Build output
 dist/

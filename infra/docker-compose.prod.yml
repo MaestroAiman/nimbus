@@ -1,0 +1,91 @@
+# Compose de production : images figees (buildees sur le PC de dev, voir README),
+# limites memoire actives par service (budget documente dans Structure.md, section 2.4).
+# Variables a definir dans infra/.env.prod (voir infra/.env.prod.example) : docker compose
+# lit automatiquement un fichier .env place a cote de ce fichier.
+#
+# `name` explicite : evite toute collision de noms de conteneurs/reseaux avec le
+# compose de dev (docker-compose.dev.yml), qui garde le nom de projet implicite
+# ("infra", derive du dossier) pour ne pas invalider son volume Postgres existant.
+name: nimbus-prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nimbus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?definir POSTGRES_PASSWORD dans infra/.env.prod}
+      POSTGRES_DB: ${POSTGRES_DB:-nimbus}
+    # Pas de port publie sur l'hote : seuls les autres conteneurs du reseau compose y accedent.
+    volumes:
+      - nimbus_pg_prod_data:/var/lib/postgresql/data
+    command: >
+      postgres
+      -c shared_buffers=192MB
+      -c work_mem=8MB
+      -c max_connections=20
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-nimbus} -d ${POSTGRES_DB:-nimbus}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    mem_limit: 400m
+    mem_reservation: 250m
+
+  # Applique les migrations Drizzle puis s'arrete ; l'API ne demarre qu'une fois ce
+  # conteneur termine avec succes (voir depends_on de `api`).
+  migrate:
+    build:
+      context: ../apps/api
+      target: migrator
+    restart: 'no'
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-nimbus}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nimbus}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 200m
+
+  api:
+    build:
+      context: ../apps/api
+      target: runtime
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER:-nimbus}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nimbus}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?definir BETTER_AUTH_SECRET dans infra/.env.prod (openssl rand -base64 32)}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      STORAGE_PATH: /app/storage
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+    # Publie temporairement le port de l'API : en attendant le reverse proxy Nginx unique
+    # de l'etape 10, le frontend appelle l'API directement sur cette origine (voir
+    # VITE_API_URL ci-dessous et la note dans apps/web/Dockerfile).
+    ports:
+      - '${API_PORT:-3000}:3000'
+    volumes:
+      - nimbus_api_prod_storage:/app/storage
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    mem_limit: 300m
+    mem_reservation: 150m
+
+  web:
+    build:
+      context: ../apps/web
+      target: runtime
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+    restart: unless-stopped
+    ports:
+      - '${WEB_PORT:-8080}:80'
+    depends_on:
+      - api
+    mem_limit: 64m
+    mem_reservation: 32m
+
+volumes:
+  nimbus_pg_prod_data:
+  nimbus_api_prod_storage:
