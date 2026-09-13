@@ -1,13 +1,16 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import express from 'express';
-import { toNodeHandler } from 'better-auth/node';
 import { AppModule } from './app.module.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
-import { auth } from './auth/auth.js';
+import { betterAuthHandler } from './auth/better-auth-handler.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
+
+  // Toutes les routes Nest vivent sous /api, pour matcher le montage de Better Auth
+  // (/api/auth/*) et permettre a Nginx de proxifier un seul prefixe /api (etape 10).
+  app.setGlobalPrefix('api');
 
   // CORS doit etre active avant tout handler pour couvrir aussi /api/auth/* et le preflight OPTIONS.
   const corsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173')
@@ -17,7 +20,7 @@ async function bootstrap() {
 
   // Le handler Better Auth doit lire le corps brut de la requete :
   // il est monte avant les parseurs de corps Express/Nest.
-  app.use('/api/auth/*splat', toNodeHandler(auth));
+  app.use('/api/auth/*splat', betterAuthHandler);
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));

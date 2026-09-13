@@ -1,4 +1,7 @@
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+// VITE_API_URL est une origine optionnelle (dev hote sans Docker, ou docker-compose.dev.yml) ;
+// vide par defaut = chemins relatifs, comme attendu derriere le reverse proxy Nginx unique
+// de production (etape 10), qui expose l'API sous /api/*.
+const API_BASE = `${import.meta.env.VITE_API_URL ?? ''}/api`;
 
 export interface Folder {
   id: string;
@@ -45,7 +48,7 @@ async function parseErrorMessage(response: Response): Promise<string> {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     credentials: 'include',
     headers:
@@ -91,7 +94,7 @@ function parseXhrErrorMessage(xhr: XMLHttpRequest): string {
 export function uploadFile(file: File, folderId: string | null, onProgress?: (percent: number) => void): Promise<FileEntry> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', `${API_URL}/files`);
+    xhr.open('POST', `${API_BASE}/files`);
     xhr.withCredentials = true;
 
     xhr.upload.onprogress = (event) => {
@@ -126,7 +129,7 @@ export function deleteFile(id: string): Promise<void> {
 }
 
 export async function downloadFile(id: string, name: string): Promise<void> {
-  const response = await fetch(`${API_URL}/files/${id}/download`, { credentials: 'include' });
+  const response = await fetch(`${API_BASE}/files/${id}/download`, { credentials: 'include' });
 
   if (!response.ok) {
     throw new Error(await parseErrorMessage(response));

@@ -14,11 +14,13 @@ CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
 # ---- build : build statique Vite ----
 # VITE_API_URL est compile en dur dans le bundle JS (limite connue de Vite avec les
-# variables d'environnement) : a reconsiderer a l'etape 10 si nginx sert l'API sur la
-# meme origine que le frontend (permettrait d'utiliser des chemins relatifs /api/...
-# et de supprimer ce besoin de valeur figee au build).
+# variables d'environnement). Vide par defaut depuis l'etape 10 : en production, Nginx
+# sert l'API sur la meme origine que le frontend (proxy /api -> NestJS), donc le code
+# frontend utilise des chemins relatifs /api/* et n'a plus besoin d'une origine figee au
+# build. Ne definir cet ARG que pour un build ou frontend et API restent sur des origines
+# separees (ex. image testee hors du reverse proxy unifie).
 FROM deps AS build
-ARG VITE_API_URL=http://localhost:3000
+ARG VITE_API_URL=""
 ENV VITE_API_URL=$VITE_API_URL
 COPY . .
 RUN npm run build
@@ -28,3 +30,6 @@ FROM nginx:1.27-alpine AS runtime
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
+# Monitoring leger (etape 11) : wget deja present dans l'image nginx:alpine (BusyBox).
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1

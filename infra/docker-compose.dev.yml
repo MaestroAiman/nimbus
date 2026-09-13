@@ -1,3 +1,9 @@
+# `name` explicite : sans cela, Docker Compose derive le nom de projet du nom du dossier
+# parent ("infra"), qui entre en collision avec d'autres repos sur cette machine rangeant
+# eux aussi leur compose de dev dans un dossier "infra/" (constate : partage du meme reseau
+# Docker "infra_default"). Ne change rien au volume Postgres nomme existant.
+name: nimbus-dev
+
 services:
   postgres:
     image: postgres:16-alpine

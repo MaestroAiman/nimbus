@@ -41,4 +41,8 @@ COPY package.json package-lock.json ./
 RUN npm install --omit=dev --legacy-peer-deps && npm cache clean --force
 COPY --from=build /app/dist ./dist
 EXPOSE 3000
+# Monitoring leger (etape 11) : pas de curl/wget sur node:alpine, verification en Node pur
+# pour ne pas alourdir l'image d'un paquet supplementaire.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 CMD ["node", "dist/main.js"]

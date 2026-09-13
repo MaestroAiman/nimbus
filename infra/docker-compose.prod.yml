@@ -56,33 +56,40 @@ services:
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-nimbus}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nimbus}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?definir BETTER_AUTH_SECRET dans infra/.env.prod (openssl rand -base64 32)}
-      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      # Origine PUBLIQUE unique (Tailscale + WEB_PORT) depuis l'etape 10 - plus l'origine
+      # interne de l'API, qui n'est plus exposee hors du reseau Docker (voir web.volumes
+      # et l'absence de `ports` ci-dessous).
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:8080}
       STORAGE_PATH: /app/storage
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
-    # Publie temporairement le port de l'API : en attendant le reverse proxy Nginx unique
-    # de l'etape 10, le frontend appelle l'API directement sur cette origine (voir
-    # VITE_API_URL ci-dessous et la note dans apps/web/Dockerfile).
-    ports:
-      - '${API_PORT:-3000}:3000'
+    # Pas de port publie sur l'hote : depuis l'etape 10, seul le reverse proxy Nginx
+    # (service `web`) est joignable de l'exterieur ; l'API n'est atteignable que via lui
+    # (/api/*) ou par les autres conteneurs du reseau Compose.
     volumes:
       - nimbus_api_prod_storage:/app/storage
     depends_on:
       migrate:
         condition: service_completed_successfully
+    # Healthcheck defini dans apps/api/Dockerfile (GET /api/health) : permet a `web`
+    # d'attendre une API reellement pretes (pas juste demarree) et a Docker de detecter
+    # un blocage (monitoring leger, etape 11).
     mem_limit: 300m
     mem_reservation: 150m
 
+  # Reverse proxy unique (etape 10) : sert le frontend statique et proxifie /api vers
+  # `api` (voir infra/nginx/nginx.conf, monte par-dessus la config bakee dans l'image).
   web:
     build:
       context: ../apps/web
       target: runtime
-      args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
     restart: unless-stopped
     ports:
       - '${WEB_PORT:-8080}:80'
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     mem_limit: 64m
     mem_reservation: 32m
 

@@ -20,9 +20,9 @@ describe('Auth (e2e)', () => {
 
     const { cookies } = await signUpAndSignIn(app, email, password);
 
-    await request(app.getHttpServer()).get('/auth/me').set('Cookie', cookies).expect(200);
+    await request(app.getHttpServer()).get('/api/auth/me').set('Cookie', cookies).expect(200);
 
-    await request(app.getHttpServer()).get('/auth/me').expect(401);
+    await request(app.getHttpServer()).get('/api/auth/me').expect(401);
 
     await request(app.getHttpServer())
       .post('/api/auth/sign-out')
@@ -30,6 +30,6 @@ describe('Auth (e2e)', () => {
       .set('Origin', 'http://localhost:3000')
       .expect(200);
 
-    await request(app.getHttpServer()).get('/auth/me').set('Cookie', cookies).expect(401);
+    await request(app.getHttpServer()).get('/api/auth/me').set('Cookie', cookies).expect(401);
   });
 });

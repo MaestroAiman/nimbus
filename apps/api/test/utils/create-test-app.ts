@@ -1,16 +1,16 @@
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { toNodeHandler } from 'better-auth/node';
 import express from 'express';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
-import { auth } from '../../src/auth/auth.js';
+import { betterAuthHandler } from '../../src/auth/better-auth-handler.js';
 
 export async function createTestApp(): Promise<INestApplication> {
   const moduleFixture = await Test.createTestingModule({ imports: [AppModule] }).compile();
 
   const app = moduleFixture.createNestApplication({ bodyParser: false });
-  app.use('/api/auth/*splat', toNodeHandler(auth));
+  app.setGlobalPrefix('api');
+  app.use('/api/auth/*splat', betterAuthHandler);
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }));
