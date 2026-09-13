@@ -1,0 +1,451 @@
+.auth-glass-showcase {
+  position: relative;
+  min-height: 100svh;
+  width: 100%;
+  background: #000000;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-glass-showcase__backdrop {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(168, 85, 247, 0.4),
+    rgba(126, 34, 206, 0.5),
+    #000000
+  );
+}
+
+.auth-glass-showcase__noise {
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
+.auth-glass-showcase__glow-top {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120vh;
+  height: 60vh;
+  border-radius: 0 0 50% 50%;
+  background: rgba(192, 132, 252, 0.2);
+  filter: blur(80px);
+}
+
+.auth-glass-showcase__glow-top-pulse {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vh;
+  height: 60vh;
+  border-radius: 0 0 9999px 9999px;
+  background: rgba(216, 180, 254, 0.2);
+  filter: blur(60px);
+}
+
+.auth-glass-showcase__glow-bottom-pulse {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90vh;
+  height: 90vh;
+  border-radius: 9999px 9999px 0 0;
+  background: rgba(192, 132, 252, 0.2);
+  filter: blur(60px);
+}
+
+.auth-glass-showcase__spot {
+  position: absolute;
+  width: 24rem;
+  height: 24rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 9999px;
+  filter: blur(100px);
+  opacity: 0.4;
+}
+
+.auth-glass-showcase__spot--left {
+  left: 25%;
+  top: 25%;
+}
+
+.auth-glass-showcase__spot--right {
+  right: 25%;
+  bottom: 25%;
+}
+
+.auth-glass-card-wrap {
+  width: 100%;
+  max-width: 384px;
+  position: relative;
+  z-index: 10;
+  padding: var(--space-md);
+}
+
+.auth-glass-card {
+  position: relative;
+}
+
+.auth-glass-card__glow {
+  position: absolute;
+  inset: -1px;
+  border-radius: 16px;
+  opacity: 0;
+  transition: opacity 0.7s ease;
+  pointer-events: none;
+}
+
+.auth-glass-card:hover .auth-glass-card__glow {
+  opacity: 0.7;
+}
+
+.auth-glass-card__beams {
+  position: absolute;
+  inset: -1px;
+  border-radius: 16px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.auth-glass-card__beam {
+  position: absolute;
+  opacity: 0.7;
+  background: linear-gradient(90deg, transparent, #ffffff, transparent);
+}
+
+.auth-glass-card__beam--top {
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 50%;
+}
+
+.auth-glass-card__beam--right {
+  top: 0;
+  right: 0;
+  width: 3px;
+  height: 50%;
+  background: linear-gradient(180deg, transparent, #ffffff, transparent);
+}
+
+.auth-glass-card__beam--bottom {
+  bottom: 0;
+  right: 0;
+  height: 3px;
+  width: 50%;
+}
+
+.auth-glass-card__beam--left {
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  height: 50%;
+  background: linear-gradient(180deg, transparent, #ffffff, transparent);
+}
+
+.auth-glass-card__corner {
+  position: absolute;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.auth-glass-card__corner--tl {
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.4);
+  filter: blur(1px);
+}
+
+.auth-glass-card__corner--tr {
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  filter: blur(2px);
+}
+
+.auth-glass-card__corner--br {
+  bottom: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  filter: blur(2px);
+}
+
+.auth-glass-card__corner--bl {
+  bottom: 0;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.4);
+  filter: blur(1px);
+}
+
+.auth-glass-card__border {
+  position: absolute;
+  inset: -0.5px;
+  border-radius: 16px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.07),
+    rgba(255, 255, 255, 0.03)
+  );
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+
+.auth-glass-card:hover .auth-glass-card__border {
+  opacity: 0.7;
+}
+
+.auth-glass-card__glass {
+  position: relative;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 16px;
+  padding: var(--space-lg);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+
+.auth-glass-card__pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  background-image: linear-gradient(135deg, white 0.5px, transparent 0.5px),
+    linear-gradient(45deg, white 0.5px, transparent 0.5px);
+  background-size: 30px 30px;
+}
+
+.auth-glass-card__header {
+  position: relative;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.auth-glass-card__logo {
+  margin: 0 auto 4px;
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-glass-card__logo-glow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
+  opacity: 0.5;
+}
+
+.auth-glass-card__title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  background: linear-gradient(to bottom, #ffffff, rgba(255, 255, 255, 0.8));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin: 0;
+}
+
+.auth-glass-card__subtitle {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  margin: 2px 0 0;
+}
+
+.auth-glass-card__form {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-glass-card__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-glass-field {
+  position: relative;
+}
+
+.auth-glass-field__wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.auth-glass-field__icon {
+  position: absolute;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  color: rgba(255, 255, 255, 0.4);
+  transition: color 0.3s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.auth-glass-field__icon--focused {
+  color: #ffffff;
+}
+
+.auth-glass-field__wrap input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px 0 40px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.auth-glass-field__wrap input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.auth-glass-field__wrap input:focus {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* PasswordInput is reused here; restyle its wrapper/icons to match this card's look */
+.auth-glass-field__wrap .field__input-wrap {
+  width: 100%;
+}
+
+.auth-glass-field__wrap .field__input-wrap input {
+  padding-left: 40px;
+}
+
+.auth-glass-field__wrap .field__toggle {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.auth-glass-field__wrap .field__toggle:hover {
+  color: #ffffff;
+}
+
+.auth-glass-card__error {
+  margin: 0;
+  color: #f87171;
+  font-size: 12px;
+}
+
+.auth-glass-card__submit {
+  position: relative;
+  width: 100%;
+  border: none;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.auth-glass-card__submit:disabled {
+  cursor: not-allowed;
+}
+
+.auth-glass-card__submit-glow {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  filter: blur(16px);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.auth-glass-card__submit:hover .auth-glass-card__submit-glow {
+  opacity: 0.7;
+}
+
+.auth-glass-card__submit-inner {
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+  color: #000000;
+  font-weight: 500;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.auth-glass-card__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 0, 0, 0.7);
+  border-top-color: transparent;
+  border-radius: 9999px;
+  animation: auth-glass-spin 0.8s linear infinite;
+}
+
+@keyframes auth-glass-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.auth-glass-card__submit-icon {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.3s ease;
+}
+
+.auth-glass-card__submit:hover .auth-glass-card__submit-icon {
+  transform: translateX(3px);
+}
+
+.auth-glass-card__footer {
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 4px 0 0;
+}
+
+.auth-glass-card__footer a {
+  position: relative;
+  display: inline-block;
+  color: #ffffff;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.auth-glass-card__footer a:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
