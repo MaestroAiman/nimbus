@@ -2,18 +2,20 @@ body {
   font-family: var(--font-sans);
   font-size: var(--font-size-base);
   line-height: 1.5;
-  color: var(--color-text);
-  background: var(--color-bg);
+  color: var(--color-ink);
+  background: var(--color-canvas);
 }
 
 h1 {
   font-size: var(--font-size-lg);
   font-weight: 600;
+  letter-spacing: -0.3px;
 }
 
 h2 {
-  font-size: var(--font-size-base);
+  font-size: 16px;
   font-weight: 600;
+  letter-spacing: -0.2px;
 }
 
 .button {
@@ -22,46 +24,92 @@ h2 {
   justify-content: center;
   gap: var(--space-sm);
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  padding: 8px 14px;
   font-size: var(--font-size-base);
   font-weight: 500;
   cursor: pointer;
   background: var(--color-accent);
-  color: var(--color-accent-contrast);
+  color: #ffffff;
+  transition: background-color 0.12s ease;
 }
 
 .button:hover {
-  opacity: 0.9;
+  background: var(--color-accent-hover);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .button--secondary {
-  background: transparent;
-  border-color: var(--color-border);
-  color: var(--color-text);
+  background: var(--color-surface-1);
+  border-color: var(--color-hairline);
+  color: var(--color-ink);
+}
+
+.button--secondary:hover {
+  background: var(--color-surface-2);
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
+  gap: 6px;
   text-align: left;
 }
 
 .field label {
   font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
+  font-weight: 500;
+  color: var(--color-ink-muted);
 }
 
 .field input {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-sm) var(--space-md);
-  background: var(--color-surface);
-  color: var(--color-text);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  background: var(--color-surface-1);
+  color: var(--color-ink);
+  outline: none;
+}
+
+.field input::placeholder {
+  color: var(--color-ink-tertiary);
 }
 
 .field input:focus {
-  outline: 2px solid var(--color-accent);
-  outline-offset: -1px;
+  border-color: var(--color-accent);
+}
+
+.field__input-wrap {
+  position: relative;
+  display: flex;
+}
+
+.field__input-wrap input {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.field__toggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-ink-tertiary);
+  cursor: pointer;
+}
+
+.field__toggle:hover {
+  color: var(--color-ink-subtle);
 }

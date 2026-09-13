@@ -1,7 +1,14 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { signOut, useSession } from '../lib/auth-client';
+import { IconFiles, IconLogout, LogoMark } from './icons';
 
-const NAV_ITEMS = [{ to: '/explorer', label: 'Mes fichiers' }];
+const NAV_ITEMS = [{ to: '/explorer', label: 'Mes fichiers', icon: IconFiles }];
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  const initials = parts.length > 1 ? parts[0][0] + parts[1][0] : parts[0].slice(0, 2);
+  return initials.toUpperCase();
+}
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -15,7 +22,10 @@ export function AppLayout() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="sidebar__brand">Nimbus</div>
+        <div className="sidebar__brand">
+          <LogoMark size={24} />
+          Nimbus
+        </div>
         <nav className="sidebar__nav">
           {NAV_ITEMS.map((item) => (
             <NavLink
@@ -23,13 +33,21 @@ export function AppLayout() {
               to={item.to}
               className={({ isActive }) => `sidebar__link${isActive ? ' sidebar__link--active' : ''}`}
             >
+              <item.icon />
               {item.label}
             </NavLink>
           ))}
         </nav>
+        <div className="sidebar__spacer" />
         <div className="sidebar__footer">
-          {session && <p className="sidebar__user">{session.user.name}</p>}
-          <button type="button" className="button button--secondary" onClick={handleSignOut}>
+          {session && (
+            <div className="sidebar__account">
+              <div className="sidebar__avatar">{getInitials(session.user.name)}</div>
+              <span className="sidebar__user">{session.user.name}</span>
+            </div>
+          )}
+          <button type="button" className="button button--secondary sidebar__logout" onClick={handleSignOut}>
+            <IconLogout />
             Se déconnecter
           </button>
         </div>
