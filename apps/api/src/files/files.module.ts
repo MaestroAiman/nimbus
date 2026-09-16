@@ -35,5 +35,6 @@ import { FilesService } from './files.service.js';
   ],
   controllers: [FilesController],
   providers: [FilesService],
+  exports: [FilesService],
 })
 export class FilesModule {}

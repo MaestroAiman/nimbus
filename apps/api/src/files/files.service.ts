@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createId } from '@paralleldrive/cuid2';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../database/database.provider.js';
 import type { Database } from '../db/client.js';
 import { files } from '../db/schema/index.js';
@@ -65,6 +65,7 @@ export class FilesService {
       .set({
         ...(dto.name !== undefined ? { name: dto.name } : {}),
         ...(dto.folderId !== undefined ? { folderId: dto.folderId } : {}),
+        ...(dto.isFavorite !== undefined ? { isFavorite: dto.isFavorite } : {}),
         updatedAt: new Date(),
       })
       .where(eq(files.id, id))
@@ -73,8 +74,28 @@ export class FilesService {
     return updated;
   }
 
+  /** Met le fichier a la corbeille (suppression reversible, voir TrashService pour la purge automatique). */
   async remove(ownerId: string, id: string): Promise<void> {
-    const file = await this.getOwnedFile(ownerId, id);
+    await this.getOwnedFile(ownerId, id);
+
+    await this.db
+      .update(files)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(files.id, id));
+  }
+
+  async restore(ownerId: string, id: string): Promise<void> {
+    await this.getOwnedFile(ownerId, id, { includeTrashed: true });
+
+    await this.db
+      .update(files)
+      .set({ deletedAt: null, updatedAt: new Date() })
+      .where(eq(files.id, id));
+  }
+
+  /** Suppression definitive : ligne DB + fichier physique. Irreversible. */
+  async permanentlyDelete(ownerId: string, id: string): Promise<void> {
+    const file = await this.getOwnedFile(ownerId, id, { includeTrashed: true });
     const absolutePath = join(this.config.getOrThrow<string>('STORAGE_PATH'), file.diskPath);
 
     await this.db.delete(files).where(eq(files.id, id));
@@ -86,11 +107,12 @@ export class FilesService {
     }
   }
 
-  private async getOwnedFile(ownerId: string, id: string) {
-    const [file] = await this.db
-      .select()
-      .from(files)
-      .where(and(eq(files.id, id), eq(files.ownerId, ownerId)));
+  async getOwnedFile(ownerId: string, id: string, options?: { includeTrashed?: boolean }) {
+    const condition = options?.includeTrashed
+      ? and(eq(files.id, id), eq(files.ownerId, ownerId))
+      : and(eq(files.id, id), eq(files.ownerId, ownerId), isNull(files.deletedAt));
+
+    const [file] = await this.db.select().from(files).where(condition);
 
     if (!file) {
       throw new NotFoundException('Fichier introuvable');

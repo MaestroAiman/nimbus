@@ -8,6 +8,8 @@ export interface Folder {
   name: string;
   ownerId: string;
   parentId: string | null;
+  isFavorite: boolean;
+  deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -20,8 +22,16 @@ export interface FileEntry {
   sizeBytes: number;
   mimeType: string;
   diskPath: string;
+  isFavorite: boolean;
+  deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface StorageUsage {
+  totalBytes: number;
+  usedBytes: number;
+  freeBytes: number;
 }
 
 export interface FolderContents {
@@ -74,12 +84,23 @@ export function createFolder(name: string, parentId: string | null): Promise<Fol
   return request<Folder>('/folders', { method: 'POST', body: JSON.stringify({ name, parentId }) });
 }
 
-export function updateFolder(id: string, changes: { name?: string; parentId?: string | null }): Promise<Folder> {
+export function updateFolder(
+  id: string,
+  changes: { name?: string; parentId?: string | null; isFavorite?: boolean },
+): Promise<Folder> {
   return request<Folder>(`/folders/${id}`, { method: 'PATCH', body: JSON.stringify(changes) });
 }
 
 export function deleteFolder(id: string): Promise<void> {
   return request<void>(`/folders/${id}`, { method: 'DELETE' });
+}
+
+export function restoreFolder(id: string): Promise<void> {
+  return request<void>(`/folders/${id}/restore`, { method: 'POST' });
+}
+
+export function permanentlyDeleteFolder(id: string): Promise<void> {
+  return request<void>(`/folders/${id}/permanent`, { method: 'DELETE' });
 }
 
 function parseXhrErrorMessage(xhr: XMLHttpRequest): string {
@@ -120,7 +141,10 @@ export function uploadFile(file: File, folderId: string | null, onProgress?: (pe
   });
 }
 
-export function updateFile(id: string, changes: { name?: string; folderId?: string | null }): Promise<FileEntry> {
+export function updateFile(
+  id: string,
+  changes: { name?: string; folderId?: string | null; isFavorite?: boolean },
+): Promise<FileEntry> {
   return request<FileEntry>(`/files/${id}`, { method: 'PATCH', body: JSON.stringify(changes) });
 }
 
@@ -128,20 +152,44 @@ export function deleteFile(id: string): Promise<void> {
   return request<void>(`/files/${id}`, { method: 'DELETE' });
 }
 
-export async function downloadFile(id: string, name: string): Promise<void> {
+export function restoreFile(id: string): Promise<void> {
+  return request<void>(`/files/${id}/restore`, { method: 'POST' });
+}
+
+export function permanentlyDeleteFile(id: string): Promise<void> {
+  return request<void>(`/files/${id}/permanent`, { method: 'DELETE' });
+}
+
+export async function fetchFileBlob(id: string): Promise<Blob> {
   const response = await fetch(`${API_BASE}/files/${id}/download`, { credentials: 'include' });
 
   if (!response.ok) {
     throw new Error(await parseErrorMessage(response));
   }
 
-  const blob = await response.blob();
+  return response.blob();
+}
+
+export async function downloadFile(id: string, name: string): Promise<void> {
+  const blob = await fetchFileBlob(id);
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = name;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+export function listFavorites(): Promise<FolderContents> {
+  return request<FolderContents>('/favorites');
+}
+
+export function listTrash(): Promise<FolderContents> {
+  return request<FolderContents>('/trash');
+}
+
+export function getStorageUsage(): Promise<StorageUsage> {
+  return request<StorageUsage>('/storage');
 }
 
 export function formatSize(bytes: number): string {

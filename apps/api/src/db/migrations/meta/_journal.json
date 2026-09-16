@@ -22,6 +22,13 @@
       "when": 1789401195061,
       "tag": "0002_keen_electro",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789575598693,
+      "tag": "0003_quiet_skin",
+      "breakpoints": true
     }
   ]
 }

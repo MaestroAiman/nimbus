@@ -201,7 +201,6 @@ export function ExplorerPage() {
   }
 
   async function handleDeleteFolder(folder: Folder) {
-    if (!window.confirm(`Supprimer le dossier "${folder.name}" et tout son contenu ?`)) return;
     try {
       await deleteFolder(folder.id);
       await refresh();
@@ -211,12 +210,29 @@ export function ExplorerPage() {
   }
 
   async function handleDeleteFile(file: FileEntry) {
-    if (!window.confirm(`Supprimer le fichier "${file.name}" ?`)) return;
     try {
       await deleteFile(file.id);
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Impossible de supprimer le fichier');
+    }
+  }
+
+  async function handleToggleFolderFavorite(folder: Folder) {
+    try {
+      await updateFolder(folder.id, { isFavorite: !folder.isFavorite });
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible de mettre à jour les favoris');
+    }
+  }
+
+  async function handleToggleFileFavorite(file: FileEntry) {
+    try {
+      await updateFile(file.id, { isFavorite: !file.isFavorite });
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible de mettre à jour les favoris');
     }
   }
 
@@ -230,6 +246,10 @@ export function ExplorerPage() {
 
   function folderActions(folder: Folder): MenuAction[] {
     return [
+      {
+        label: folder.isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris',
+        onClick: () => handleToggleFolderFavorite(folder),
+      },
       { label: 'Déplacer', onClick: () => startMove({ type: 'folder', id: folder.id, name: folder.name }) },
       { label: 'Renommer', onClick: () => startRename({ type: 'folder', id: folder.id, value: folder.name }) },
       { label: 'Supprimer', onClick: () => handleDeleteFolder(folder), danger: true },
@@ -239,6 +259,10 @@ export function ExplorerPage() {
   function fileActions(file: FileEntry): MenuAction[] {
     return [
       { label: 'Télécharger', onClick: () => handleDownload(file) },
+      {
+        label: file.isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris',
+        onClick: () => handleToggleFileFavorite(file),
+      },
       { label: 'Déplacer', onClick: () => startMove({ type: 'file', id: file.id, name: file.name }) },
       { label: 'Renommer', onClick: () => startRename({ type: 'file', id: file.id, value: file.name }) },
       { label: 'Supprimer', onClick: () => handleDeleteFile(file), danger: true },

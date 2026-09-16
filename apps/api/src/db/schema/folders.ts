@@ -1,5 +1,5 @@
-import { type AnyPgColumn, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { type AnyPgColumn, boolean, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
 import { users } from './auth-schema.js';
 
 export const folders = pgTable(
@@ -11,10 +11,19 @@ export const folders = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     parentId: text('parent_id').references((): AnyPgColumn => folders.id, { onDelete: 'cascade' }),
+    isFavorite: boolean('is_favorite').notNull().default(false),
+    // Non-null = dans la corbeille depuis cette date (purge automatique apres 7 jours, voir TrashService)
+    deletedAt: timestamp('deleted_at'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
-  (table) => [uniqueIndex('folders_owner_parent_name_idx').on(table.ownerId, table.parentId, table.name)],
+  (table) => [
+    // Index partiel : ignore les dossiers en corbeille, pour qu'un nom redevienne disponible
+    // des qu'un dossier homonyme est supprime (sans attendre sa purge definitive).
+    uniqueIndex('folders_owner_parent_name_idx')
+      .on(table.ownerId, table.parentId, table.name)
+      .where(sql`${table.deletedAt} is null`),
+  ],
 );
 
 export const foldersRelations = relations(folders, ({ one, many }) => ({

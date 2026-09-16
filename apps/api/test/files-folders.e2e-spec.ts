@@ -137,4 +137,85 @@ describe('Folders & Files (e2e)', () => {
       .send({ folderId: ownerFolder.body.id })
       .expect(404);
   });
+
+  it('gere les favoris, la corbeille (suppression reversible), la restauration et la suppression definitive', async () => {
+    const server = app.getHttpServer();
+    const { cookies } = await signUpAndSignIn(app, `trash-${Date.now()}@nimbus.local`, 'correct-horse-battery-staple');
+
+    const folder = await request(server).post('/api/folders').set('Cookie', cookies).send({ name: 'Projets' }).expect(201);
+
+    const file = await request(server)
+      .post('/api/files')
+      .set('Cookie', cookies)
+      .field('folderId', folder.body.id)
+      .attach('file', Buffer.from('contenu'), 'note.txt')
+      .expect(201);
+
+    // Favoris : marquer, retrouver dans /favorites, retirer
+    await request(server).patch(`/api/files/${file.body.id}`).set('Cookie', cookies).send({ isFavorite: true }).expect(200);
+    await request(server)
+      .patch(`/api/folders/${folder.body.id}`)
+      .set('Cookie', cookies)
+      .send({ isFavorite: true })
+      .expect(200);
+
+    const favorites = await request(server).get('/api/favorites').set('Cookie', cookies).expect(200);
+    expect(favorites.body.files.map((f: { id: string }) => f.id)).toContain(file.body.id);
+    expect(favorites.body.folders.map((f: { id: string }) => f.id)).toContain(folder.body.id);
+
+    await request(server).patch(`/api/files/${file.body.id}`).set('Cookie', cookies).send({ isFavorite: false }).expect(200);
+    const favoritesAfterUnmark = await request(server).get('/api/favorites').set('Cookie', cookies).expect(200);
+    expect(favoritesAfterUnmark.body.files.map((f: { id: string }) => f.id)).not.toContain(file.body.id);
+
+    // Corbeille : le dossier supprime (avec le fichier dedans) apparait dans /trash, et une seule fois (racine)
+    await request(server).delete(`/api/folders/${folder.body.id}`).set('Cookie', cookies).expect(200);
+
+    const trash = await request(server).get('/api/trash').set('Cookie', cookies).expect(200);
+    expect(trash.body.folders.map((f: { id: string }) => f.id)).toEqual([folder.body.id]);
+    expect(trash.body.files.map((f: { id: string }) => f.id)).not.toContain(file.body.id);
+
+    // Le dossier et son contenu ne sont plus visibles via les routes normales
+    await request(server).get(`/api/folders?parentId=${folder.body.id}`).set('Cookie', cookies).expect(404);
+    await request(server).get(`/api/files/${file.body.id}/download`).set('Cookie', cookies).expect(404);
+
+    // Restauration : le dossier et son contenu reapparaissent, la corbeille se vide
+    await request(server).post(`/api/folders/${folder.body.id}/restore`).set('Cookie', cookies).expect(200);
+    await request(server).get(`/api/files/${file.body.id}/download`).set('Cookie', cookies).expect(200);
+
+    const trashAfterRestore = await request(server).get('/api/trash').set('Cookie', cookies).expect(200);
+    expect(trashAfterRestore.body.folders).toHaveLength(0);
+    expect(trashAfterRestore.body.files).toHaveLength(0);
+
+    // Suppression definitive : irreversible, meme via /restore
+    await request(server).delete(`/api/folders/${folder.body.id}`).set('Cookie', cookies).expect(200);
+    await request(server).delete(`/api/folders/${folder.body.id}/permanent`).set('Cookie', cookies).expect(200);
+    await request(server).post(`/api/folders/${folder.body.id}/restore`).set('Cookie', cookies).expect(404);
+
+    const trashAfterPurge = await request(server).get('/api/trash').set('Cookie', cookies).expect(200);
+    expect(trashAfterPurge.body.folders).toHaveLength(0);
+    expect(trashAfterPurge.body.files).toHaveLength(0);
+  });
+
+  it('empeche de creer/uploader dans un dossier passe a la corbeille, et libere son nom', async () => {
+    const server = app.getHttpServer();
+    const { cookies } = await signUpAndSignIn(app, `trash2-${Date.now()}@nimbus.local`, 'correct-horse-battery-staple');
+
+    const folder = await request(server).post('/api/folders').set('Cookie', cookies).send({ name: 'Archives' }).expect(201);
+    await request(server).delete(`/api/folders/${folder.body.id}`).set('Cookie', cookies).expect(200);
+
+    await request(server)
+      .post('/api/folders')
+      .set('Cookie', cookies)
+      .send({ name: 'Sous-dossier', parentId: folder.body.id })
+      .expect(404);
+    await request(server)
+      .post('/api/files')
+      .set('Cookie', cookies)
+      .field('folderId', folder.body.id)
+      .attach('file', Buffer.from('x'), 'x.txt')
+      .expect(404);
+
+    // Le nom "Archives" redevient disponible a la racine malgre le dossier homonyme en corbeille
+    await request(server).post('/api/folders').set('Cookie', cookies).send({ name: 'Archives' }).expect(201);
+  });
 });

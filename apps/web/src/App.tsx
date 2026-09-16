@@ -3,9 +3,11 @@ import { AppLayout } from './components/AppLayout';
 import { RequireAdmin } from './components/RequireAdmin';
 import { RequireAuth } from './components/RequireAuth';
 import { AdminUsersPage } from './pages/AdminUsersPage';
+import { CorbeillePage } from './pages/CorbeillePage';
 import { ExplorerPage } from './pages/ExplorerPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { SuivisPage } from './pages/SuivisPage';
 
 export default function App() {
   return (
@@ -17,6 +19,8 @@ export default function App() {
           <Route element={<AppLayout />}>
             <Route path="/" element={<Navigate to="/explorer" replace />} />
             <Route path="/explorer" element={<ExplorerPage />} />
+            <Route path="/suivis" element={<SuivisPage />} />
+            <Route path="/corbeille" element={<CorbeillePage />} />
             <Route element={<RequireAdmin />}>
               <Route path="/admin/users" element={<AdminUsersPage />} />
             </Route>

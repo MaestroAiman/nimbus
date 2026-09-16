@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import type { AuthUser } from '../auth/session.types.js';
@@ -29,5 +29,16 @@ export class FoldersController {
   @Delete(':id')
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.foldersService.remove(user.id, id);
+  }
+
+  @Post(':id/restore')
+  @HttpCode(200)
+  restore(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.foldersService.restore(user.id, id);
+  }
+
+  @Delete(':id/permanent')
+  permanentlyDelete(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.foldersService.permanentlyDelete(user.id, id);
   }
 }

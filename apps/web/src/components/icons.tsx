@@ -163,15 +163,6 @@ export function IconClose(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconTrash(props: SVGProps<SVGSVGElement>) {
-  return (
-    <Icon {...props}>
-      <polyline points="3 6 5 6 21 6"></polyline>
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-    </Icon>
-  );
-}
-
 export function IconUsers(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>
@@ -215,6 +206,40 @@ export function IconChevronDown(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon strokeWidth="2" {...props}>
       <polyline points="6 9 12 15 18 9"></polyline>
+    </Icon>
+  );
+}
+
+export function IconTrash(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <polyline points="3 6 5 6 21 6"></polyline>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+    </Icon>
+  );
+}
+
+export function IconStar(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon strokeWidth="1.6" {...props}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+    </Icon>
+  );
+}
+
+export function IconStarFilled(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon strokeWidth="1.6" fill="currentColor" {...props}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+    </Icon>
+  );
+}
+
+export function IconRestore(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <polyline points="1 4 1 10 7 10"></polyline>
+      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
     </Icon>
   );
 }

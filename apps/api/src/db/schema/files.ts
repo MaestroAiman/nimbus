@@ -1,4 +1,4 @@
-import { bigint, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { bigint, boolean, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { users } from './auth-schema.js';
 import { folders } from './folders.js';
@@ -14,6 +14,9 @@ export const files = pgTable('files', {
   mimeType: text('mime_type').notNull(),
   // Chemin relatif du fichier sur le volume disque dedie (pas le binaire, seulement la metadonnee)
   diskPath: text('disk_path').notNull(),
+  isFavorite: boolean('is_favorite').notNull().default(false),
+  // Non-null = dans la corbeille depuis cette date (purge automatique apres 7 jours, voir TrashService)
+  deletedAt: timestamp('deleted_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

@@ -1,6 +1,9 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { unlink } from 'node:fs/promises';
+import { join } from 'node:path';
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { createId } from '@paralleldrive/cuid2';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../database/database.provider.js';
 import type { Database } from '../db/client.js';
 import { files, folders } from '../db/schema/index.js';
@@ -9,7 +12,12 @@ import type { UpdateFolderDto } from './dto/update-folder.dto.js';
 
 @Injectable()
 export class FoldersService {
-  constructor(@Inject(DRIZZLE_DB) private readonly db: Database) {}
+  private readonly logger = new Logger(FoldersService.name);
+
+  constructor(
+    @Inject(DRIZZLE_DB) private readonly db: Database,
+    private readonly config: ConfigService,
+  ) {}
 
   async create(ownerId: string, dto: CreateFolderDto) {
     if (dto.parentId) {
@@ -36,11 +44,11 @@ export class FoldersService {
       this.db
         .select()
         .from(folders)
-        .where(and(eq(folders.ownerId, ownerId), parentFolderCondition)),
+        .where(and(eq(folders.ownerId, ownerId), parentFolderCondition, isNull(folders.deletedAt))),
       this.db
         .select()
         .from(files)
-        .where(and(eq(files.ownerId, ownerId), parentFileCondition)),
+        .where(and(eq(files.ownerId, ownerId), parentFileCondition, isNull(files.deletedAt))),
     ]);
 
     return { folders: subfolders, files: folderFiles };
@@ -59,6 +67,7 @@ export class FoldersService {
       .set({
         ...(dto.name !== undefined ? { name: dto.name } : {}),
         ...(dto.parentId !== undefined ? { parentId: dto.parentId } : {}),
+        ...(dto.isFavorite !== undefined ? { isFavorite: dto.isFavorite } : {}),
         updatedAt: new Date(),
       })
       .where(eq(folders.id, id))
@@ -67,22 +76,99 @@ export class FoldersService {
     return updated;
   }
 
+  /** Met le dossier (et tout son contenu, recursivement) a la corbeille. Reversible via restore(). */
   async remove(ownerId: string, id: string): Promise<void> {
     await this.getOwnedFolder(ownerId, id);
-    await this.db.delete(folders).where(eq(folders.id, id));
+
+    const folderIds = await this.collectFolderSubtreeIds(ownerId, id);
+    const now = new Date();
+
+    await this.db
+      .update(folders)
+      .set({ deletedAt: now, updatedAt: now })
+      .where(and(eq(folders.ownerId, ownerId), inArray(folders.id, folderIds)));
+    await this.db
+      .update(files)
+      .set({ deletedAt: now, updatedAt: now })
+      .where(and(eq(files.ownerId, ownerId), inArray(files.folderId, folderIds)));
   }
 
-  async getOwnedFolder(ownerId: string, id: string) {
-    const [folder] = await this.db
+  /** Restaure le dossier et tout son contenu (meme sous-arbre que remove()). */
+  async restore(ownerId: string, id: string): Promise<void> {
+    await this.getOwnedFolder(ownerId, id, { includeTrashed: true });
+
+    const folderIds = await this.collectFolderSubtreeIds(ownerId, id);
+    const now = new Date();
+
+    await this.db
+      .update(folders)
+      .set({ deletedAt: null, updatedAt: now })
+      .where(and(eq(folders.ownerId, ownerId), inArray(folders.id, folderIds)));
+    await this.db
+      .update(files)
+      .set({ deletedAt: null, updatedAt: now })
+      .where(and(eq(files.ownerId, ownerId), inArray(files.folderId, folderIds)));
+  }
+
+  /** Suppression definitive du dossier et de tout son contenu : lignes DB + fichiers physiques. Irreversible. */
+  async permanentlyDelete(ownerId: string, id: string): Promise<void> {
+    await this.getOwnedFolder(ownerId, id, { includeTrashed: true });
+
+    const folderIds = await this.collectFolderSubtreeIds(ownerId, id);
+    const filesToDelete = await this.db
       .select()
-      .from(folders)
-      .where(and(eq(folders.id, id), eq(folders.ownerId, ownerId)));
+      .from(files)
+      .where(and(eq(files.ownerId, ownerId), inArray(files.folderId, folderIds)));
+    const storagePath = this.config.getOrThrow<string>('STORAGE_PATH');
+
+    // Le FK folders.parentId (onDelete: cascade) et files.folderId (onDelete: cascade)
+    // se chargent de supprimer tout le sous-arbre en base a partir de la seule racine.
+    await this.db.delete(folders).where(eq(folders.id, id));
+
+    await Promise.all(
+      filesToDelete.map(async (file) => {
+        try {
+          await unlink(join(storagePath, file.diskPath));
+        } catch (error) {
+          this.logger.warn(`Impossible de supprimer le fichier physique ${file.diskPath} : ${String(error)}`);
+        }
+      }),
+    );
+  }
+
+  async getOwnedFolder(ownerId: string, id: string, options?: { includeTrashed?: boolean }) {
+    const condition = options?.includeTrashed
+      ? and(eq(folders.id, id), eq(folders.ownerId, ownerId))
+      : and(eq(folders.id, id), eq(folders.ownerId, ownerId), isNull(folders.deletedAt));
+
+    const [folder] = await this.db.select().from(folders).where(condition);
 
     if (!folder) {
       throw new NotFoundException('Dossier introuvable');
     }
 
     return folder;
+  }
+
+  /** Parcourt l'arborescence (peu importe l'etat de corbeille) et retourne id racine + tous ses descendants. */
+  private async collectFolderSubtreeIds(ownerId: string, rootId: string): Promise<string[]> {
+    const ids = [rootId];
+    let frontier = [rootId];
+
+    while (frontier.length > 0) {
+      const children = await this.db
+        .select({ id: folders.id })
+        .from(folders)
+        .where(and(eq(folders.ownerId, ownerId), inArray(folders.parentId, frontier)));
+
+      if (children.length === 0) break;
+
+      const childIds = children.map((child) => child.id);
+      ids.push(...childIds);
+      frontier = childIds;
+    }
+
+    return ids;
   }
 
   private async assertNoCycle(ownerId: string, movingFolderId: string, newParentId: string): Promise<void> {

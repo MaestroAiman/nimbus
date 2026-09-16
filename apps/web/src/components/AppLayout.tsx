@@ -1,8 +1,14 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { formatSize, getStorageUsage, type StorageUsage } from '../lib/files-api';
 import { signOut, useSession } from '../lib/auth-client';
-import { IconFiles, IconLogout, IconUsers, LogoMark } from './icons';
+import { IconFiles, IconLogout, IconStar, IconTrash, IconUsers, LogoMark } from './icons';
 
-const NAV_ITEMS = [{ to: '/explorer', label: 'Mes fichiers', icon: IconFiles }];
+const NAV_ITEMS = [
+  { to: '/explorer', label: 'Mes fichiers', icon: IconFiles },
+  { to: '/suivis', label: 'Suivis', icon: IconStar },
+  { to: '/corbeille', label: 'Corbeille', icon: IconTrash },
+];
 const ADMIN_NAV_ITEM = { to: '/admin/users', label: 'Administration', icon: IconUsers };
 
 function getInitials(name: string): string {
@@ -15,6 +21,13 @@ export function AppLayout() {
   const navigate = useNavigate();
   const { data: session } = useSession();
   const navItems = session?.user.role === 'ADMIN' ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
+  const [storageUsage, setStorageUsage] = useState<StorageUsage | null>(null);
+
+  useEffect(() => {
+    getStorageUsage()
+      .then(setStorageUsage)
+      .catch(() => setStorageUsage(null));
+  }, []);
 
   async function handleSignOut() {
     await signOut();
@@ -41,6 +54,19 @@ export function AppLayout() {
           ))}
         </nav>
         <div className="sidebar__spacer" />
+        {storageUsage && (
+          <div className="sidebar__storage">
+            <div className="sidebar__storage-bar">
+              <div
+                className="sidebar__storage-bar-fill"
+                style={{ width: `${Math.min(100, (storageUsage.usedBytes / storageUsage.totalBytes) * 100)}%` }}
+              />
+            </div>
+            <span className="sidebar__storage-label">
+              {formatSize(storageUsage.usedBytes)} utilisés sur {formatSize(storageUsage.totalBytes)}
+            </span>
+          </div>
+        )}
         <div className="sidebar__footer">
           {session && (
             <div className="sidebar__account">

@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -60,5 +61,16 @@ export class FilesController {
   @Delete(':id')
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.filesService.remove(user.id, id);
+  }
+
+  @Post(':id/restore')
+  @HttpCode(200)
+  restore(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.filesService.restore(user.id, id);
+  }
+
+  @Delete(':id/permanent')
+  permanentlyDelete(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.filesService.permanentlyDelete(user.id, id);
   }
 }
