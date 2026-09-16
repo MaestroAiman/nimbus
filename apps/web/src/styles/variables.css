@@ -20,6 +20,7 @@
   /* Semantique */
   --color-danger: #f87171;
   --color-danger-hover: #ff9d9d;
+  --color-warning: #f5a623;
 
   /* Typographie */
   --font-sans: 'Inter', -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;

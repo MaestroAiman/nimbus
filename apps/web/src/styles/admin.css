@@ -1,0 +1,114 @@
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  background: var(--color-surface-3);
+  color: var(--color-ink-muted);
+}
+
+.role-badge--admin {
+  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  color: var(--color-accent);
+}
+
+.role-badge--pending {
+  background: color-mix(in srgb, var(--color-warning) 20%, transparent);
+  color: var(--color-warning);
+}
+
+.field__hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-tertiary);
+}
+
+.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-surface-1);
+  color: var(--color-ink);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.select-trigger:hover:not(:disabled) {
+  border-color: var(--color-hairline-strong);
+}
+
+.select-trigger:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.select-trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.select-trigger__chevron {
+  flex-shrink: 0;
+  color: var(--color-ink-tertiary);
+  transition: transform 0.12s ease;
+}
+
+.select-trigger__chevron--open {
+  transform: rotate(180deg);
+}
+
+.select-panel {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-modal);
+  z-index: 20;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.select-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: none;
+  color: var(--color-ink);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.select-option:hover,
+.select-option:focus-visible {
+  background: var(--color-surface-3);
+  outline: none;
+}
+
+.select-option--active {
+  color: var(--color-accent);
+  font-weight: 500;
+}
+
+.button--danger {
+  background: var(--color-danger);
+  color: #ffffff;
+}
+
+.button--danger:hover {
+  filter: brightness(1.08);
+}

@@ -1,11 +1,12 @@
 import { type FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
-import { Mail, User, ArrowRight } from 'lucide-react';
+import { Clock, Mail, User, ArrowRight } from 'lucide-react';
 import { PasswordInput } from './PasswordInput';
 import { signUp } from '../lib/auth-client';
 
 type FocusedField = 'name' | 'email' | 'password' | null;
+type Status = 'form' | 'pending';
 
 export function SignUpCard() {
   const [name, setName] = useState('');
@@ -14,6 +15,7 @@ export function SignUpCard() {
   const [focusedInput, setFocusedInput] = useState<FocusedField>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState<Status>('form');
 
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
@@ -41,6 +43,13 @@ export function SignUpCard() {
     setIsSubmitting(false);
 
     if (signUpError) {
+      if (signUpError.code === 'BANNED_USER') {
+        // Chemin nominal pour une nouvelle auto-inscription : le compte est cree mais bloque
+        // en attente de validation admin (voir apps/api/src/auth/auth.ts) - ce n'est pas une
+        // vraie erreur, juste la connexion automatique qui echoue comme prevu.
+        setStatus('pending');
+        return;
+      }
       setError(signUpError.message ?? 'Impossible de creer le compte');
       return;
     }
@@ -142,39 +151,81 @@ export function SignUpCard() {
           <div className="auth-glass-card__glass">
             <div className="auth-glass-card__pattern" />
 
-            <div className="auth-glass-card__header">
-              <motion.div
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', duration: 0.8 }}
-                className="auth-glass-card__logo"
-              >
-                <span className="auth-glass-card__title" style={{ fontSize: 18, margin: 0 }}>
-                  N
-                </span>
-                <div className="auth-glass-card__logo-glow" />
-              </motion.div>
+            {status === 'pending' ? (
+              <div className="auth-glass-card__header">
+                <motion.div
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', duration: 0.8 }}
+                  className="auth-glass-card__logo auth-glass-card__logo--pending"
+                >
+                  <Clock size={20} />
+                </motion.div>
 
-              <motion.h1
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="auth-glass-card__title"
-              >
-                Créer votre espace
-              </motion.h1>
+                <motion.h1
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="auth-glass-card__title"
+                >
+                  Inscription bien reçue
+                </motion.h1>
 
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="auth-glass-card__subtitle"
-              >
-                Votre stockage personnel, chez vous.
-              </motion.p>
-            </div>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="auth-glass-card__subtitle"
+                >
+                  Votre compte a été créé. Un administrateur doit valider votre inscription avant que vous puissiez vous
+                  connecter.
+                </motion.p>
 
-            <form onSubmit={handleSubmit} className="auth-glass-card__form">
+                <motion.p
+                  className="auth-glass-card__footer"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  style={{ marginTop: 'var(--space-lg, 24px)' }}
+                >
+                  <Link to="/login">Retour à la connexion</Link>
+                </motion.p>
+              </div>
+            ) : (
+              <>
+                <div className="auth-glass-card__header">
+                  <motion.div
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', duration: 0.8 }}
+                    className="auth-glass-card__logo"
+                  >
+                    <span className="auth-glass-card__title" style={{ fontSize: 18, margin: 0 }}>
+                      N
+                    </span>
+                    <div className="auth-glass-card__logo-glow" />
+                  </motion.div>
+
+                  <motion.h1
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="auth-glass-card__title"
+                  >
+                    Créer votre espace
+                  </motion.h1>
+
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="auth-glass-card__subtitle"
+                  >
+                    Votre stockage personnel, chez vous.
+                  </motion.p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="auth-glass-card__form">
               <div className="auth-glass-card__fields">
                 <motion.div
                   className="auth-glass-field"
@@ -285,7 +336,9 @@ export function SignUpCard() {
               >
                 Déjà un compte ? <Link to="/login">Se connecter</Link>
               </motion.p>
-            </form>
+                </form>
+              </>
+            )}
           </div>
         </motion.div>
       </motion.div>

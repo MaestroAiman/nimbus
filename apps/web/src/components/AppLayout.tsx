@@ -1,8 +1,9 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { signOut, useSession } from '../lib/auth-client';
-import { IconFiles, IconLogout, LogoMark } from './icons';
+import { IconFiles, IconLogout, IconUsers, LogoMark } from './icons';
 
 const NAV_ITEMS = [{ to: '/explorer', label: 'Mes fichiers', icon: IconFiles }];
+const ADMIN_NAV_ITEM = { to: '/admin/users', label: 'Administration', icon: IconUsers };
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -13,6 +14,7 @@ function getInitials(name: string): string {
 export function AppLayout() {
   const navigate = useNavigate();
   const { data: session } = useSession();
+  const navItems = session?.user.role === 'ADMIN' ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
 
   async function handleSignOut() {
     await signOut();
@@ -27,7 +29,7 @@ export function AppLayout() {
           Nimbus
         </div>
         <nav className="sidebar__nav">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

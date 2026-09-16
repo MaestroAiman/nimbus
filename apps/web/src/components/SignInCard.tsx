@@ -40,7 +40,11 @@ export function SignInCard() {
     setIsSubmitting(false);
 
     if (signInError) {
-      setError(signInError.message ?? 'Identifiants invalides');
+      setError(
+        signInError.code === 'BANNED_USER'
+          ? 'Votre compte est en attente de validation par un administrateur.'
+          : (signInError.message ?? 'Identifiants invalides'),
+      );
       return;
     }
 

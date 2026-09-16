@@ -253,6 +253,11 @@
   overflow: hidden;
 }
 
+.auth-glass-card__logo--pending {
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 15%, transparent);
+}
+
 .auth-glass-card__logo-glow {
   position: absolute;
   inset: 0;
