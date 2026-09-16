@@ -1,4 +1,6 @@
 import { type ChangeEvent, type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { ActionsMenu, type MenuAction } from '../components/ActionsMenu';
+import { FilePreviewModal } from '../components/FilePreviewModal';
 import { IconFile, IconFolder, IconGridView, IconListView, IconNewFolder, IconUpload } from '../components/icons';
 import {
   createFolder,
@@ -48,6 +50,9 @@ export function ExplorerPage() {
   const [newFolderName, setNewFolderName] = useState('');
   const [renaming, setRenaming] = useState<RenamingEntry | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+
+  const [previewingFile, setPreviewingFile] = useState<FileEntry | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const [moving, setMoving] = useState<MovingEntry | null>(null);
   const [pickerBreadcrumb, setPickerBreadcrumb] = useState<Crumb[]>([ROOT_CRUMB]);
@@ -223,6 +228,23 @@ export function ExplorerPage() {
     }
   }
 
+  function folderActions(folder: Folder): MenuAction[] {
+    return [
+      { label: 'Déplacer', onClick: () => startMove({ type: 'folder', id: folder.id, name: folder.name }) },
+      { label: 'Renommer', onClick: () => startRename({ type: 'folder', id: folder.id, value: folder.name }) },
+      { label: 'Supprimer', onClick: () => handleDeleteFolder(folder), danger: true },
+    ];
+  }
+
+  function fileActions(file: FileEntry): MenuAction[] {
+    return [
+      { label: 'Télécharger', onClick: () => handleDownload(file) },
+      { label: 'Déplacer', onClick: () => startMove({ type: 'file', id: file.id, name: file.name }) },
+      { label: 'Renommer', onClick: () => startRename({ type: 'file', id: file.id, value: file.name }) },
+      { label: 'Supprimer', onClick: () => handleDeleteFile(file), danger: true },
+    ];
+  }
+
   const isEmpty = !isLoading && folders.length === 0 && files.length === 0;
 
   return (
@@ -364,27 +386,13 @@ export function ExplorerPage() {
                   <td>—</td>
                   <td>{formatDate(folder.updatedAt)}</td>
                   <td className="explorer-row__actions">
-                    <button
-                      type="button"
-                      className="explorer-row__action"
-                      onClick={() => startMove({ type: 'folder', id: folder.id, name: folder.name })}
-                    >
-                      Déplacer
-                    </button>
-                    <button
-                      type="button"
-                      className="explorer-row__action"
-                      onClick={() => startRename({ type: 'folder', id: folder.id, value: folder.name })}
-                    >
-                      Renommer
-                    </button>
-                    <button
-                      type="button"
-                      className="explorer-row__action explorer-row__action--danger"
-                      onClick={() => handleDeleteFolder(folder)}
-                    >
-                      Supprimer
-                    </button>
+                    <ActionsMenu
+                      actions={folderActions(folder)}
+                      isOpen={openMenuId === folder.id}
+                      onToggle={() => setOpenMenuId((current) => (current === folder.id ? null : folder.id))}
+                      onClose={() => setOpenMenuId(null)}
+                      label={`Actions pour ${folder.name}`}
+                    />
                   </td>
                 </tr>
               ))}
@@ -407,39 +415,26 @@ export function ExplorerPage() {
                         </button>
                       </form>
                     ) : (
-                      <span className="explorer-row__name">
+                      <button
+                        type="button"
+                        className="explorer-row__name explorer-row__link"
+                        onClick={() => setPreviewingFile(file)}
+                      >
                         <IconFile className="explorer-row__icon" />
                         {file.name}
-                      </span>
+                      </button>
                     )}
                   </td>
                   <td>{formatSize(file.sizeBytes)}</td>
                   <td>{formatDate(file.updatedAt)}</td>
                   <td className="explorer-row__actions">
-                    <button type="button" className="explorer-row__action" onClick={() => handleDownload(file)}>
-                      Télécharger
-                    </button>
-                    <button
-                      type="button"
-                      className="explorer-row__action"
-                      onClick={() => startMove({ type: 'file', id: file.id, name: file.name })}
-                    >
-                      Déplacer
-                    </button>
-                    <button
-                      type="button"
-                      className="explorer-row__action"
-                      onClick={() => startRename({ type: 'file', id: file.id, value: file.name })}
-                    >
-                      Renommer
-                    </button>
-                    <button
-                      type="button"
-                      className="explorer-row__action explorer-row__action--danger"
-                      onClick={() => handleDeleteFile(file)}
-                    >
-                      Supprimer
-                    </button>
+                    <ActionsMenu
+                      actions={fileActions(file)}
+                      isOpen={openMenuId === file.id}
+                      onToggle={() => setOpenMenuId((current) => (current === file.id ? null : file.id))}
+                      onClose={() => setOpenMenuId(null)}
+                      label={`Actions pour ${file.name}`}
+                    />
                   </td>
                 </tr>
               ))}
@@ -448,30 +443,102 @@ export function ExplorerPage() {
         </div>
       ) : (
         <div className="explorer-grid">
-          {folders.map((folder) => (
-            <button
-              key={folder.id}
-              type="button"
-              className="explorer-grid__item"
-              onClick={() => openFolder(folder)}
-            >
-              <IconFolder width={28} height={28} strokeWidth={1.3} />
-              <span className="explorer-grid__name">{folder.name}</span>
-              <span className="explorer-grid__meta">{formatDate(folder.updatedAt)}</span>
-            </button>
-          ))}
-          {files.map((file) => (
-            <button
-              key={file.id}
-              type="button"
-              className="explorer-grid__item"
-              onClick={() => handleDownload(file)}
-            >
-              <IconFile width={28} height={28} strokeWidth={1.3} />
-              <span className="explorer-grid__name">{file.name}</span>
-              <span className="explorer-grid__meta">{formatSize(file.sizeBytes)}</span>
-            </button>
-          ))}
+          {folders.map((folder) =>
+            renaming?.type === 'folder' && renaming.id === folder.id ? (
+              <div key={folder.id} className="explorer-grid__item">
+                <IconFolder width={28} height={28} strokeWidth={1.3} />
+                <form className="explorer__inline-form explorer__inline-form--grid" onSubmit={handleRenameSubmit}>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={renaming.value}
+                    onChange={(event) => setRenaming({ ...renaming, value: event.target.value })}
+                  />
+                  <button type="submit" className="button">
+                    OK
+                  </button>
+                  <button type="button" className="button button--secondary" onClick={() => setRenaming(null)}>
+                    Annuler
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <div
+                key={folder.id}
+                className="explorer-grid__item"
+                role="button"
+                tabIndex={0}
+                onClick={() => openFolder(folder)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openFolder(folder);
+                  }
+                }}
+              >
+                <div className="explorer-grid__menu" onClick={(event) => event.stopPropagation()}>
+                  <ActionsMenu
+                    actions={folderActions(folder)}
+                    isOpen={openMenuId === folder.id}
+                    onToggle={() => setOpenMenuId((current) => (current === folder.id ? null : folder.id))}
+                    onClose={() => setOpenMenuId(null)}
+                    label={`Actions pour ${folder.name}`}
+                  />
+                </div>
+                <IconFolder width={28} height={28} strokeWidth={1.3} />
+                <span className="explorer-grid__name">{folder.name}</span>
+                <span className="explorer-grid__meta">{formatDate(folder.updatedAt)}</span>
+              </div>
+            ),
+          )}
+          {files.map((file) =>
+            renaming?.type === 'file' && renaming.id === file.id ? (
+              <div key={file.id} className="explorer-grid__item">
+                <IconFile width={28} height={28} strokeWidth={1.3} />
+                <form className="explorer__inline-form explorer__inline-form--grid" onSubmit={handleRenameSubmit}>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={renaming.value}
+                    onChange={(event) => setRenaming({ ...renaming, value: event.target.value })}
+                  />
+                  <button type="submit" className="button">
+                    OK
+                  </button>
+                  <button type="button" className="button button--secondary" onClick={() => setRenaming(null)}>
+                    Annuler
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <div
+                key={file.id}
+                className="explorer-grid__item"
+                role="button"
+                tabIndex={0}
+                onClick={() => setPreviewingFile(file)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setPreviewingFile(file);
+                  }
+                }}
+              >
+                <div className="explorer-grid__menu" onClick={(event) => event.stopPropagation()}>
+                  <ActionsMenu
+                    actions={fileActions(file)}
+                    isOpen={openMenuId === file.id}
+                    onToggle={() => setOpenMenuId((current) => (current === file.id ? null : file.id))}
+                    onClose={() => setOpenMenuId(null)}
+                    label={`Actions pour ${file.name}`}
+                  />
+                </div>
+                <IconFile width={28} height={28} strokeWidth={1.3} />
+                <span className="explorer-grid__name">{file.name}</span>
+                <span className="explorer-grid__meta">{formatSize(file.sizeBytes)}</span>
+              </div>
+            ),
+          )}
         </div>
       )}
 
@@ -520,6 +587,8 @@ export function ExplorerPage() {
           </div>
         </div>
       )}
+
+      {previewingFile && <FilePreviewModal file={previewingFile} onClose={() => setPreviewingFile(null)} />}
     </div>
   );
 }
