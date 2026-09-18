@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
 import { createId } from '@paralleldrive/cuid2';
 import { diskStorage } from 'multer';
+import { ActivityModule } from '../activity/activity.module.js';
 import { FoldersModule } from '../folders/folders.module.js';
 import { FilesController } from './files.controller.js';
 import { FilesService } from './files.service.js';
@@ -12,6 +13,7 @@ import { FilesService } from './files.service.js';
 @Module({
   imports: [
     FoldersModule,
+    ActivityModule,
     MulterModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

@@ -77,8 +77,8 @@ export class FoldersService {
   }
 
   /** Met le dossier (et tout son contenu, recursivement) a la corbeille. Reversible via restore(). */
-  async remove(ownerId: string, id: string): Promise<void> {
-    await this.getOwnedFolder(ownerId, id);
+  async remove(ownerId: string, id: string) {
+    const folder = await this.getOwnedFolder(ownerId, id);
 
     const folderIds = await this.collectFolderSubtreeIds(ownerId, id);
     const now = new Date();
@@ -91,11 +91,13 @@ export class FoldersService {
       .update(files)
       .set({ deletedAt: now, updatedAt: now })
       .where(and(eq(files.ownerId, ownerId), inArray(files.folderId, folderIds)));
+
+    return { id: folder.id, name: folder.name };
   }
 
   /** Restaure le dossier et tout son contenu (meme sous-arbre que remove()). */
-  async restore(ownerId: string, id: string): Promise<void> {
-    await this.getOwnedFolder(ownerId, id, { includeTrashed: true });
+  async restore(ownerId: string, id: string) {
+    const folder = await this.getOwnedFolder(ownerId, id, { includeTrashed: true });
 
     const folderIds = await this.collectFolderSubtreeIds(ownerId, id);
     const now = new Date();
@@ -108,11 +110,13 @@ export class FoldersService {
       .update(files)
       .set({ deletedAt: null, updatedAt: now })
       .where(and(eq(files.ownerId, ownerId), inArray(files.folderId, folderIds)));
+
+    return { id: folder.id, name: folder.name };
   }
 
   /** Suppression definitive du dossier et de tout son contenu : lignes DB + fichiers physiques. Irreversible. */
-  async permanentlyDelete(ownerId: string, id: string): Promise<void> {
-    await this.getOwnedFolder(ownerId, id, { includeTrashed: true });
+  async permanentlyDelete(ownerId: string, id: string) {
+    const folder = await this.getOwnedFolder(ownerId, id, { includeTrashed: true });
 
     const folderIds = await this.collectFolderSubtreeIds(ownerId, id);
     const filesToDelete = await this.db
@@ -134,6 +138,8 @@ export class FoldersService {
         }
       }),
     );
+
+    return { id: folder.id, name: folder.name };
   }
 
   async getOwnedFolder(ownerId: string, id: string, options?: { includeTrashed?: boolean }) {

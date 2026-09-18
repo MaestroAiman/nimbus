@@ -225,6 +225,51 @@
   gap: 10px;
 }
 
+.modal__divider {
+  border: none;
+  border-top: 1px solid var(--color-hairline);
+  margin: 0;
+}
+
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: min(60vh, 480px);
+  overflow-y: auto;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-1);
+}
+
+.activity-list__item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-hairline);
+  font-size: var(--font-size-base);
+}
+
+.activity-list__item:last-child {
+  border-bottom: none;
+}
+
+.activity-list__text {
+  color: var(--color-ink-muted);
+}
+
+.activity-list__text strong {
+  color: var(--color-ink);
+}
+
+.activity-list__date {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--color-ink-tertiary);
+}
+
 .explorer-table-wrapper {
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-lg);

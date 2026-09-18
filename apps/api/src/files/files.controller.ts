@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
+import { ActivityService } from '../activity/activity.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import type { AuthUser } from '../auth/session.types.js';
@@ -24,16 +25,21 @@ import { FilesService } from './files.service.js';
 @UseGuards(AuthGuard)
 @Controller('files')
 export class FilesController {
-  constructor(private readonly filesService: FilesService) {}
+  constructor(
+    private readonly filesService: FilesService,
+    private readonly activityService: ActivityService,
+  ) {}
 
   @Post()
   @UseInterceptors(FileInterceptor('file'))
-  upload(
+  async upload(
     @CurrentUser() user: AuthUser,
     @UploadedFile() file: Express.Multer.File,
     @Body('folderId') folderId?: string,
   ) {
-    return this.filesService.create(user.id, file, folderId ?? null);
+    const created = await this.filesService.create(user.id, file, folderId ?? null);
+    await this.activityService.record(user.id, 'file.created', 'file', created.id, created.name);
+    return created;
   }
 
   @Get(':id/download')
@@ -54,23 +60,32 @@ export class FilesController {
   }
 
   @Patch(':id')
-  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: UpdateFileDto) {
-    return this.filesService.update(user.id, id, dto);
+  async update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: UpdateFileDto) {
+    const updated = await this.filesService.update(user.id, id, dto);
+    if (dto.name !== undefined) {
+      await this.activityService.record(user.id, 'file.renamed', 'file', updated.id, updated.name);
+    } else if (dto.folderId !== undefined) {
+      await this.activityService.record(user.id, 'file.moved', 'file', updated.id, updated.name);
+    }
+    return updated;
   }
 
   @Delete(':id')
-  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.filesService.remove(user.id, id);
+  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const removed = await this.filesService.remove(user.id, id);
+    await this.activityService.record(user.id, 'file.trashed', 'file', removed.id, removed.name);
   }
 
   @Post(':id/restore')
   @HttpCode(200)
-  restore(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.filesService.restore(user.id, id);
+  async restore(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const restored = await this.filesService.restore(user.id, id);
+    await this.activityService.record(user.id, 'file.restored', 'file', restored.id, restored.name);
   }
 
   @Delete(':id/permanent')
-  permanentlyDelete(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.filesService.permanentlyDelete(user.id, id);
+  async permanentlyDelete(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const deleted = await this.filesService.permanentlyDelete(user.id, id);
+    await this.activityService.record(user.id, 'file.deleted', 'file', deleted.id, deleted.name);
   }
 }

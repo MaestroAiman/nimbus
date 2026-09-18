@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { IconMoreVertical } from './icons';
 
@@ -14,14 +14,29 @@ interface ActionsMenuProps {
   onToggle: () => void;
   onClose: () => void;
   label?: string;
+  triggerContent?: ReactNode;
+  triggerClassName?: string;
 }
 
 interface MenuPosition {
-  top: number;
-  right: number;
+  top?: number;
+  bottom?: number;
+  left?: number;
+  right?: number;
 }
 
-export function ActionsMenu({ actions, isOpen, onToggle, onClose, label = 'Actions' }: ActionsMenuProps) {
+const ESTIMATED_MENU_WIDTH = 200;
+const ESTIMATED_MENU_HEIGHT = 200;
+
+export function ActionsMenu({
+  actions,
+  isOpen,
+  onToggle,
+  onClose,
+  label = 'Actions',
+  triggerContent,
+  triggerClassName = 'actions-menu__toggle',
+}: ActionsMenuProps) {
   const toggleRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
   const [position, setPosition] = useState<MenuPosition | null>(null);
@@ -32,7 +47,13 @@ export function ActionsMenu({ actions, isOpen, onToggle, onClose, label = 'Actio
       return;
     }
     const rect = toggleRef.current.getBoundingClientRect();
-    setPosition({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    const openUpward = rect.bottom + ESTIMATED_MENU_HEIGHT > window.innerHeight;
+    const alignLeft = rect.left + ESTIMATED_MENU_WIDTH <= window.innerWidth;
+
+    setPosition({
+      ...(openUpward ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 }),
+      ...(alignLeft ? { left: rect.left } : { right: window.innerWidth - rect.right }),
+    });
   }, [isOpen]);
 
   useEffect(() => {
@@ -72,7 +93,7 @@ export function ActionsMenu({ actions, isOpen, onToggle, onClose, label = 'Actio
       <button
         ref={toggleRef}
         type="button"
-        className="actions-menu__toggle"
+        className={triggerClassName}
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-label={label}
@@ -81,7 +102,7 @@ export function ActionsMenu({ actions, isOpen, onToggle, onClose, label = 'Actio
           onToggle();
         }}
       >
-        <IconMoreVertical />
+        {triggerContent ?? <IconMoreVertical />}
       </button>
       {isOpen &&
         position &&
@@ -90,7 +111,7 @@ export function ActionsMenu({ actions, isOpen, onToggle, onClose, label = 'Actio
             ref={menuRef}
             className="actions-menu__list"
             role="menu"
-            style={{ position: 'fixed', top: position.top, right: position.right }}
+            style={{ position: 'fixed', ...position }}
           >
             {actions.map((action) => (
               <li key={action.label} role="none">

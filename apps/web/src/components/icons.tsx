@@ -2,22 +2,18 @@ import type { SVGProps } from 'react';
 
 export function LogoMark({ size = 28 }: { size?: number }) {
   return (
-    <div
+    <img
+      src="/logo.png"
+      alt="Nimbus"
+      width={size}
+      height={size}
       style={{
         width: size,
         height: size,
-        borderRadius: size > 24 ? 8 : 7,
-        background: 'var(--color-accent)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        objectFit: 'contain',
         flexShrink: 0,
       }}
-    >
-      <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="#ffffff">
-        <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
-      </svg>
-    </div>
+    />
   );
 }
 
@@ -240,6 +236,44 @@ export function IconRestore(props: SVGProps<SVGSVGElement>) {
     <Icon {...props}>
       <polyline points="1 4 1 10 7 10"></polyline>
       <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+    </Icon>
+  );
+}
+
+export function IconPanelLeftClose(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon strokeWidth="1.8" {...props}>
+      <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+      <line x1="9" y1="3" x2="9" y2="21"></line>
+      <polyline points="14 9 11 12 14 15"></polyline>
+    </Icon>
+  );
+}
+
+export function IconPanelLeftOpen(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon strokeWidth="1.8" {...props}>
+      <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+      <line x1="9" y1="3" x2="9" y2="21"></line>
+      <polyline points="12 9 15 12 12 15"></polyline>
+    </Icon>
+  );
+}
+
+export function IconBell(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+    </Icon>
+  );
+}
+
+export function IconUser(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="8" r="4"></circle>
+      <path d="M4 21c0-4 3.5-7 8-7s8 3 8 7"></path>
     </Icon>
   );
 }

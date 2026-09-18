@@ -14,6 +14,7 @@ import { FilesModule } from './files/files.module.js';
 import { FavoritesModule } from './favorites/favorites.module.js';
 import { TrashModule } from './trash/trash.module.js';
 import { StorageModule } from './storage/storage.module.js';
+import { ActivityModule } from './activity/activity.module.js';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { StorageModule } from './storage/storage.module.js';
     FavoritesModule,
     TrashModule,
     StorageModule,
+    ActivityModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -200,9 +200,7 @@ export function SignUpCard() {
                     transition={{ type: 'spring', duration: 0.8 }}
                     className="auth-glass-card__logo"
                   >
-                    <span className="auth-glass-card__title" style={{ fontSize: 18, margin: 0 }}>
-                      N
-                    </span>
+                    <img src="/logo.png" alt="Nimbus" style={{ width: '70%', height: '70%', objectFit: 'contain' }} />
                     <div className="auth-glass-card__logo-glow" />
                   </motion.div>
 

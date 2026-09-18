@@ -1,7 +1,7 @@
 // VITE_API_URL est une origine optionnelle (dev hote sans Docker, ou docker-compose.dev.yml) ;
 // vide par defaut = chemins relatifs, comme attendu derriere le reverse proxy Nginx unique
 // de production (etape 10), qui expose l'API sous /api/*.
-const API_BASE = `${import.meta.env.VITE_API_URL ?? ''}/api`;
+export const API_BASE = `${import.meta.env.VITE_API_URL ?? ''}/api`;
 
 export interface Folder {
   id: string;
@@ -57,7 +57,7 @@ async function parseErrorMessage(response: Response): Promise<string> {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     credentials: 'include',
@@ -206,4 +206,8 @@ export function formatSize(bytes: number): string {
 
 export function formatDate(value: string): string {
   return new Date(value).toLocaleDateString('fr-FR');
+}
+
+export function formatDateTime(value: string): string {
+  return new Date(value).toLocaleString('fr-FR');
 }

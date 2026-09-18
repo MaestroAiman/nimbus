@@ -155,10 +155,8 @@ export function SignInCard() {
                 transition={{ type: 'spring', duration: 0.8 }}
                 className="auth-glass-card__logo"
               >
-                <span className="auth-glass-card__title" style={{ fontSize: 18, margin: 0 }}>
-                  N
-                </span>
-                <div className="auth-glass-card__logo-glow" />
+                <img src="/logo.png" alt="Nimbus" style={{  objectFit: 'contain' }} />
+                {/* <div className="auth-glass-card__logo-glow" /> */}
               </motion.div>
 
               <motion.h1

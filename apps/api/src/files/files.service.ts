@@ -75,26 +75,32 @@ export class FilesService {
   }
 
   /** Met le fichier a la corbeille (suppression reversible, voir TrashService pour la purge automatique). */
-  async remove(ownerId: string, id: string): Promise<void> {
+  async remove(ownerId: string, id: string) {
     await this.getOwnedFile(ownerId, id);
 
-    await this.db
+    const [updated] = await this.db
       .update(files)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
-      .where(eq(files.id, id));
+      .where(eq(files.id, id))
+      .returning({ id: files.id, name: files.name });
+
+    return updated;
   }
 
-  async restore(ownerId: string, id: string): Promise<void> {
+  async restore(ownerId: string, id: string) {
     await this.getOwnedFile(ownerId, id, { includeTrashed: true });
 
-    await this.db
+    const [updated] = await this.db
       .update(files)
       .set({ deletedAt: null, updatedAt: new Date() })
-      .where(eq(files.id, id));
+      .where(eq(files.id, id))
+      .returning({ id: files.id, name: files.name });
+
+    return updated;
   }
 
   /** Suppression definitive : ligne DB + fichier physique. Irreversible. */
-  async permanentlyDelete(ownerId: string, id: string): Promise<void> {
+  async permanentlyDelete(ownerId: string, id: string) {
     const file = await this.getOwnedFile(ownerId, id, { includeTrashed: true });
     const absolutePath = join(this.config.getOrThrow<string>('STORAGE_PATH'), file.diskPath);
 
@@ -105,6 +111,8 @@ export class FilesService {
     } catch (error) {
       this.logger.warn(`Impossible de supprimer le fichier physique ${file.diskPath} : ${String(error)}`);
     }
+
+    return { id: file.id, name: file.name };
   }
 
   async getOwnedFile(ownerId: string, id: string, options?: { includeTrashed?: boolean }) {
