@@ -31,5 +31,7 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
 # Monitoring leger (etape 11) : wget deja present dans l'image nginx:alpine (BusyBox).
+# 127.0.0.1 et non localhost : dans le conteneur, localhost se resout d'abord en ::1 (IPv6),
+# or nginx n'ecoute qu'en IPv4 (`listen 80;`) et BusyBox wget ne retente pas en IPv4.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
+  CMD wget --quiet --tries=1 --spider http://127.0.0.1/ || exit 1
