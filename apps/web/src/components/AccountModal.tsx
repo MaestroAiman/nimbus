@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { authClient, useSession } from '../lib/auth-client';
-import { IconClose } from './icons';
+import { useIsMobile } from '../lib/use-media-query';
+import { IconChevronLeft, IconClose } from './icons';
 import { PasswordInput } from './PasswordInput';
 
 interface AccountModalProps {
@@ -8,6 +9,7 @@ interface AccountModalProps {
 }
 
 export function AccountModal({ onClose }: AccountModalProps) {
+  const isMobile = useIsMobile();
   const { data: session } = useSession();
 
   const [name, setName] = useState(session?.user.name ?? '');
@@ -81,11 +83,11 @@ export function AccountModal({ onClose }: AccountModalProps) {
 
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" onClick={onClose}>
-      <div className="modal" onClick={(event) => event.stopPropagation()}>
+      <div className="modal modal--fullscreen" onClick={(event) => event.stopPropagation()}>
         <div className="modal__header">
           <h2 className="modal__title">Mon compte</h2>
           <button type="button" className="modal__close" onClick={onClose} aria-label="Fermer">
-            <IconClose />
+            {isMobile ? <IconChevronLeft width={18} height={18} /> : <IconClose />}
           </button>
         </div>
 

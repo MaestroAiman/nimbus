@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { type ActivityEvent, describeActivity, listActivity } from '../lib/activity-api';
 import { formatDateTime } from '../lib/files-api';
-import { IconClose } from './icons';
+import { useIsMobile } from '../lib/use-media-query';
+import { IconChevronLeft, IconClose } from './icons';
 
 interface NotificationsModalProps {
   onClose: () => void;
 }
 
 export function NotificationsModal({ onClose }: NotificationsModalProps) {
+  const isMobile = useIsMobile();
   const [events, setEvents] = useState<ActivityEvent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,11 +29,11 @@ export function NotificationsModal({ onClose }: NotificationsModalProps) {
 
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" onClick={onClose}>
-      <div className="modal modal--preview" onClick={(event) => event.stopPropagation()}>
+      <div className="modal modal--preview modal--fullscreen" onClick={(event) => event.stopPropagation()}>
         <div className="modal__header">
           <h2 className="modal__title">Notifications</h2>
           <button type="button" className="modal__close" onClick={onClose} aria-label="Fermer">
-            <IconClose />
+            {isMobile ? <IconChevronLeft width={18} height={18} /> : <IconClose />}
           </button>
         </div>
 

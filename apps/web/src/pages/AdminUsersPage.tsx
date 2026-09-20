@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AddUserModal } from '../components/AddUserModal';
 import { ActionsMenu, type MenuAction } from '../components/ActionsMenu';
 import { DeleteUserModal } from '../components/DeleteUserModal';
 import { EditUserModal } from '../components/EditUserModal';
-import { IconUserPlus } from '../components/icons';
+import { IconChevronLeft, IconUserPlus } from '../components/icons';
 import { ResetPasswordModal } from '../components/ResetPasswordModal';
 import { type AdminUser, approveUser, isPending, listUsers } from '../lib/users-api';
 
 export function AdminUsersPage() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,14 +69,27 @@ export function AdminUsersPage() {
   return (
     <div>
       <div className="explorer__header">
-        <div>
+        <button
+          type="button"
+          className="page-back"
+          onClick={() => navigate('/compte')}
+          aria-label="Retour au compte"
+        >
+          <IconChevronLeft width={18} height={18} />
+        </button>
+        <div className="explorer__heading">
           <h1>Administration</h1>
           <p className="explorer__empty-subtitle">Gestion des comptes utilisateurs</p>
         </div>
         <div className="explorer__actions">
-          <button type="button" className="button" onClick={() => setIsAdding(true)}>
+          <button
+            type="button"
+            className="button explorer__action-new-user"
+            aria-label="Nouvel utilisateur"
+            onClick={() => setIsAdding(true)}
+          >
             <IconUserPlus />
-            Nouvel utilisateur
+            <span className="button__label">Nouvel utilisateur</span>
           </button>
         </div>
       </div>
@@ -105,19 +120,19 @@ export function AdminUsersPage() {
             <tbody>
               {sortedUsers.map((user) => (
                 <tr key={user.id}>
-                  <td>{user.name}</td>
-                  <td>{user.email}</td>
-                  <td>
+                  <td className="cell-name cell-user-name">{user.name}</td>
+                  <td className="cell-user-email">{user.email}</td>
+                  <td className="cell-user-role">
                     <span className={`role-badge${user.role === 'ADMIN' ? ' role-badge--admin' : ''}`}>{user.role}</span>
                   </td>
-                  <td>
+                  <td className="cell-user-status">
                     {isPending(user) ? (
                       <span className="role-badge role-badge--pending">En attente</span>
                     ) : (
                       <span className="role-badge">Actif</span>
                     )}
                   </td>
-                  <td>{formatDate(user.createdAt)}</td>
+                  <td className="cell-secondary">{formatDate(user.createdAt)}</td>
                   <td className="explorer-row__actions">
                     <ActionsMenu
                       actions={actionsFor(user)}
@@ -125,6 +140,7 @@ export function AdminUsersPage() {
                       onToggle={() => setOpenMenuId((current) => (current === user.id ? null : user.id))}
                       onClose={() => setOpenMenuId(null)}
                       label={`Actions pour ${user.name}`}
+                      title={user.name}
                     />
                   </td>
                 </tr>

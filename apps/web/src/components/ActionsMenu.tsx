@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useIsMobile } from '../lib/use-media-query';
 import { IconMoreVertical } from './icons';
 
 export interface MenuAction {
@@ -14,6 +15,8 @@ interface ActionsMenuProps {
   onToggle: () => void;
   onClose: () => void;
   label?: string;
+  // Titre de la feuille d'actions affichee sur mobile (nom du fichier, du dossier, de l'utilisateur).
+  title?: string;
   triggerContent?: ReactNode;
   triggerClassName?: string;
 }
@@ -34,15 +37,17 @@ export function ActionsMenu({
   onToggle,
   onClose,
   label = 'Actions',
+  title,
   triggerContent,
   triggerClassName = 'actions-menu__toggle',
 }: ActionsMenuProps) {
   const toggleRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
   const [position, setPosition] = useState<MenuPosition | null>(null);
+  const isMobile = useIsMobile();
 
   useLayoutEffect(() => {
-    if (!isOpen || !toggleRef.current) {
+    if (!isOpen || isMobile || !toggleRef.current) {
       setPosition(null);
       return;
     }
@@ -54,7 +59,7 @@ export function ActionsMenu({
       ...(openUpward ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 }),
       ...(alignLeft ? { left: rect.left } : { right: window.innerWidth - rect.right }),
     });
-  }, [isOpen]);
+  }, [isOpen, isMobile]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -78,15 +83,18 @@ export function ActionsMenu({
       onClose();
     }
 
-    document.addEventListener('mousedown', handlePointerDown);
     document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('scroll', handleScroll, true);
+    // La feuille mobile a son propre fond cliquable et defile en interne : pas de fermeture au scroll.
+    if (!isMobile) {
+      document.addEventListener('mousedown', handlePointerDown);
+      document.addEventListener('scroll', handleScroll, true);
+    }
     return () => {
       document.removeEventListener('mousedown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('scroll', handleScroll, true);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, isMobile, onClose]);
 
   return (
     <div className="actions-menu">
@@ -105,6 +113,36 @@ export function ActionsMenu({
         {triggerContent ?? <IconMoreVertical />}
       </button>
       {isOpen &&
+        isMobile &&
+        createPortal(
+          <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={title ?? label} onClick={onClose}>
+            <div className="modal" onClick={(event) => event.stopPropagation()}>
+              {title && <h2 className="modal__title">{title}</h2>}
+              <div className="sheet-list">
+                {actions.map((action) => (
+                  <button
+                    key={action.label}
+                    type="button"
+                    className={`sheet-list__item${action.danger ? ' sheet-list__item--danger' : ''}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      action.onClick();
+                      onClose();
+                    }}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="button button--secondary sheet-cancel" onClick={onClose}>
+                Annuler
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
+      {isOpen &&
+        !isMobile &&
         position &&
         createPortal(
           <ul

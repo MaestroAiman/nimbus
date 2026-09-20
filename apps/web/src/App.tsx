@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './components/AppLayout';
 import { RequireAdmin } from './components/RequireAdmin';
 import { RequireAuth } from './components/RequireAuth';
+import { AccountPage } from './pages/AccountPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { CorbeillePage } from './pages/CorbeillePage';
 import { ExplorerPage } from './pages/ExplorerPage';
@@ -21,6 +22,7 @@ export default function App() {
             <Route path="/explorer" element={<ExplorerPage />} />
             <Route path="/suivis" element={<SuivisPage />} />
             <Route path="/corbeille" element={<CorbeillePage />} />
+            <Route path="/compte" element={<AccountPage />} />
             <Route element={<RequireAdmin />}>
               <Route path="/admin/users" element={<AdminUsersPage />} />
             </Route>

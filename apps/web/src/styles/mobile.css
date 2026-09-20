@@ -1,0 +1,671 @@
+/*
+ * Interface mobile (issue du design "Nimbus Mobile") : barre d'onglets en bas, listes a la place des
+ * tableaux, feuilles (bottom sheets) et ecrans plein ecran a la place des modales centrees.
+ * Les pages de connexion / inscription ne sont pas concernees (styles/auth-glass-card.css).
+ *
+ * Importe en dernier dans index.css. Le breakpoint doit rester aligne sur lib/use-media-query.ts.
+ */
+
+/* Elements qui n'existent que pour le mobile : caches partout ailleurs. */
+.page-back,
+.modal__download,
+.modal__close--mobile,
+.explorer__progress-label,
+.explorer-row__meta {
+  display: none;
+}
+
+.modal__message {
+  color: var(--color-ink-subtle);
+  line-height: 1.5;
+}
+
+@media (max-width: 767px) {
+  .app-shell * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ---------- Coque de l'application ---------- */
+
+  .app-shell {
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-main {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  .app-main > div {
+    padding: 16px;
+  }
+
+  .app-main h1 {
+    font-size: 19px;
+    font-weight: 700;
+  }
+
+  /* Un champ de saisie < 16px declenche un zoom automatique sur iOS Safari au focus. */
+  .app-shell input,
+  .app-shell select,
+  .app-shell textarea,
+  .app-shell .select-trigger {
+    font-size: 16px;
+  }
+
+  .bottom-nav {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    border-top: 1px solid var(--color-hairline);
+    background: var(--color-surface-1);
+    padding: 6px 4px calc(env(safe-area-inset-bottom, 0px) + 4px);
+  }
+
+  .bottom-nav__tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 0;
+    text-decoration: none;
+    font-size: 10.5px;
+    color: var(--color-ink-subtle);
+  }
+
+  .bottom-nav__tab--active {
+    color: var(--color-accent);
+    font-weight: 500;
+  }
+
+  /* ---------- En-tetes de page ---------- */
+
+  .explorer__header {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .explorer__breadcrumb {
+    flex-wrap: wrap;
+    margin-top: 4px;
+    gap: 2px;
+  }
+
+  .explorer__header > div:first-child {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .explorer__header > div:first-child + .explorer__actions {
+    flex: 1 1 100%;
+  }
+
+  .explorer__actions {
+    gap: 8px;
+  }
+
+  .explorer__actions .segmented-control {
+    margin-right: auto;
+  }
+
+  .explorer__actions .button {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+  }
+
+  .explorer__actions .button__label {
+    display: none;
+  }
+
+  /* Design : "nouveau dossier" en secondaire, "envoyer" en bouton d'accent. */
+  .explorer__action-new-folder {
+    order: 2;
+    background: var(--color-surface-1);
+    border-color: var(--color-hairline);
+    color: var(--color-ink-muted);
+  }
+
+  .explorer__action-upload {
+    order: 3;
+    background: var(--color-accent);
+    border-color: transparent;
+    color: #ffffff;
+  }
+
+  .explorer__action-upload:disabled {
+    opacity: 0.6;
+  }
+
+  .explorer__progress {
+    margin-bottom: 6px;
+  }
+
+  .explorer__progress-label {
+    display: block;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: var(--color-ink-tertiary);
+  }
+
+  .explorer__empty {
+    padding: 64px 20px;
+  }
+
+  /* Ecran "Administration" : fleche de retour + titre + action a droite. */
+  .page-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin-left: -6px;
+    border: none;
+    background: none;
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+
+  .explorer__heading {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .explorer__action-new-user {
+    background: none;
+    border-color: transparent;
+    color: var(--color-accent);
+  }
+
+  .explorer__header .explorer__action-new-user {
+    width: 30px;
+    height: 30px;
+  }
+
+  /* ---------- Tableaux -> listes ---------- */
+
+  .explorer-table-wrapper {
+    border: none;
+    border-radius: 0;
+    background: none;
+    overflow: visible;
+  }
+
+  .explorer-table,
+  .explorer-table tbody {
+    display: block;
+  }
+
+  .explorer-table thead {
+    display: none;
+  }
+
+  .explorer-table tbody tr,
+  .explorer-table tbody tr:hover {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 6px;
+    row-gap: 4px;
+    padding: 12px 4px;
+    border-bottom: 1px solid #18191a;
+    background: none;
+  }
+
+  .explorer-table td,
+  .explorer-table tbody tr:last-child td {
+    display: block;
+    padding: 0;
+    border: none;
+  }
+
+  .cell-secondary {
+    display: none !important;
+  }
+
+  .cell-name {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .explorer-row__name {
+    width: 100%;
+    gap: 12px;
+    text-align: left;
+  }
+
+  .explorer-row__link:hover {
+    color: inherit;
+  }
+
+  .explorer-row__icon {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    padding: 9px;
+    border-radius: var(--radius-md);
+    background: var(--color-surface-2);
+  }
+
+  .explorer-row__text {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .explorer-row__title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+    color: var(--color-ink);
+  }
+
+  .explorer-row__meta {
+    display: block;
+    margin-top: 2px;
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: var(--color-ink-tertiary);
+  }
+
+  .explorer-row__actions {
+    order: 2;
+    flex: 0 0 auto;
+  }
+
+  .actions-menu__toggle {
+    width: 32px;
+    height: 32px;
+  }
+
+  /* Lignes de la liste des utilisateurs : nom + menu / email / pastilles. */
+  .cell-user-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+
+  .cell-user-email {
+    order: 3;
+    flex: 1 1 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11.5px;
+    color: var(--color-ink-tertiary);
+  }
+
+  .cell-user-role,
+  .cell-user-status {
+    order: 4;
+    margin-top: 2px;
+  }
+
+  .cell-user-role .role-badge,
+  .cell-user-status .role-badge {
+    padding: 2px 8px;
+    font-size: 10px;
+  }
+
+  /* ---------- Grille ---------- */
+
+  .explorer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .explorer-grid__item {
+    min-width: 0;
+    padding: 18px 10px 12px;
+    gap: 8px;
+  }
+
+  .explorer-grid__item:hover {
+    border-color: var(--color-hairline);
+  }
+
+  .explorer-grid__name {
+    font-size: 12.5px;
+  }
+
+  .explorer-grid__meta {
+    font-size: 10.5px;
+  }
+
+  /* ---------- Feuilles (bottom sheets) ---------- */
+
+  .modal-overlay {
+    align-items: flex-end;
+  }
+
+  .modal {
+    width: 100%;
+    max-width: none;
+    max-height: 80dvh;
+    overflow-y: auto;
+    gap: 14px;
+    padding: 8px 18px calc(env(safe-area-inset-bottom, 0px) + 18px);
+    border-bottom: none;
+    border-radius: 18px 18px 0 0;
+    background: var(--color-surface-2);
+  }
+
+  .modal::before {
+    content: '';
+    display: block;
+    flex-shrink: 0;
+    width: 36px;
+    height: 4px;
+    margin: 6px auto 2px;
+    border-radius: 2px;
+    background: var(--color-hairline-strong);
+  }
+
+  .modal__title {
+    flex: 1;
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .modal__actions {
+    gap: 10px;
+  }
+
+  .modal__actions .button {
+    flex: 1;
+    height: 42px;
+  }
+
+  .field input,
+  .explorer__inline-form input,
+  .select-trigger {
+    height: 42px;
+  }
+
+  .sheet-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sheet-list__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 13px 4px;
+    border: none;
+    border-bottom: 1px solid var(--color-hairline);
+    background: none;
+    color: var(--color-ink);
+    font: inherit;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .sheet-list__item svg {
+    flex-shrink: 0;
+    color: var(--color-ink-subtle);
+  }
+
+  .sheet-list__item--danger {
+    color: var(--color-danger);
+  }
+
+  .sheet-cancel {
+    width: 100%;
+    height: 42px;
+  }
+
+  /* ---------- Ecrans plein ecran (aperçu, deplacer, notifications, compte) ---------- */
+
+  .modal--fullscreen {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-height: none;
+    padding: 0 0 env(safe-area-inset-bottom, 0px);
+    gap: 14px;
+    border: none;
+    border-radius: 0;
+    background: var(--color-canvas);
+    box-shadow: none;
+  }
+
+  .modal--fullscreen::before {
+    display: none;
+  }
+
+  .modal--fullscreen > :not(.modal__header) {
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+
+  .modal--fullscreen > .modal__header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    flex-shrink: 0;
+    justify-content: flex-start;
+    gap: 10px;
+    margin-bottom: -4px;
+    padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 14px;
+    border-bottom: 1px solid var(--color-hairline);
+    background: var(--color-canvas);
+  }
+
+  .modal--fullscreen .modal__close,
+  .modal__download,
+  .modal__close--mobile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: none;
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+
+  .modal--fullscreen .modal__close {
+    order: -1;
+  }
+
+  .modal__download {
+    color: var(--color-ink-subtle);
+  }
+
+  .modal--fullscreen .modal__actions {
+    justify-content: flex-start;
+  }
+
+  .modal--fullscreen form .modal__actions .button {
+    flex: none;
+    height: 36px;
+    padding: 0 14px;
+    font-size: 12.5px;
+  }
+
+  /* Le retour se fait par la fleche de l'en-tete. */
+  .modal--fullscreen form .modal__actions .button--secondary {
+    display: none;
+  }
+
+  /* Selecteur de dossier de destination : liste pleine largeur + boutons epingles en bas. */
+  .modal--fullscreen .modal__folder-list {
+    flex: 1;
+    max-height: none;
+    border: none;
+    border-radius: 0;
+    background: none;
+  }
+
+  .modal--fullscreen .modal__folder-list li {
+    border-color: #18191a;
+  }
+
+  .modal--fullscreen .modal__folder-list .explorer-row__link {
+    padding: 12px 4px;
+    font-size: 14px;
+  }
+
+  .modal--fullscreen > .modal__actions:last-child {
+    position: sticky;
+    bottom: 0;
+    margin: 0;
+    padding: 14px 16px calc(env(safe-area-inset-bottom, 0px) + 14px);
+    border-top: 1px solid var(--color-hairline);
+    background: var(--color-canvas);
+  }
+
+  .modal--fullscreen > .modal__actions:last-child .button {
+    flex: 1;
+    height: 42px;
+    font-size: 13.5px;
+  }
+
+  .modal--preview {
+    width: 100%;
+  }
+
+  .preview-modal__body {
+    flex: 1;
+    padding: 0 0 16px;
+  }
+
+  .preview-modal__image {
+    max-height: none;
+  }
+
+  .preview-modal__frame {
+    height: calc(100dvh - 120px);
+  }
+
+  .activity-list {
+    max-height: none;
+    overflow: visible;
+    border: none;
+    border-radius: 0;
+    background: none;
+  }
+
+  .activity-list__item {
+    padding: 11px 4px;
+    border-color: #18191a;
+    font-size: 13px;
+  }
+
+  /* ---------- Onglet Compte ---------- */
+
+  .account-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 12px;
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-1);
+  }
+
+  .account-card--column {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .account-card__avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-pill);
+    background: var(--color-surface-3);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-ink-muted);
+  }
+
+  .account-card__identity {
+    min-width: 0;
+  }
+
+  .account-card__name,
+  .account-card__email {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .account-card__name {
+    font-size: 14.5px;
+    font-weight: 600;
+  }
+
+  .account-card__email {
+    font-size: 12px;
+    color: var(--color-ink-subtle);
+  }
+
+  .account-list {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-lg);
+  }
+
+  .account-list__row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 14px;
+    border: none;
+    border-bottom: 1px solid var(--color-hairline);
+    background: var(--color-surface-1);
+    color: var(--color-ink);
+    font: inherit;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .account-list__row:last-child {
+    border-bottom: none;
+  }
+
+  .account-list__row svg {
+    flex-shrink: 0;
+    color: var(--color-ink-subtle);
+  }
+
+  .account-list__row > svg:last-child {
+    color: var(--color-ink-tertiary);
+  }
+
+  .account-list__label {
+    flex: 1;
+  }
+
+  .account-list__row--danger,
+  .account-list__row--danger svg {
+    color: var(--color-danger);
+  }
+}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActionsMenu, type MenuAction } from '../components/ActionsMenu';
 import { FilePreviewModal } from '../components/FilePreviewModal';
 import { IconFile, IconFolder, IconStar } from '../components/icons';
+import { RowName } from '../components/RowName';
 import {
   downloadFile,
   type FileEntry,
@@ -115,14 +116,17 @@ export function SuivisPage() {
             <tbody>
               {folders.map((folder) => (
                 <tr key={folder.id}>
-                  <td>
+                  <td className="cell-name">
                     <span className="explorer-row__name">
-                      <IconFolder className="explorer-row__icon" />
-                      {folder.name}
+                      <RowName
+                        icon={<IconFolder className="explorer-row__icon" />}
+                        name={folder.name}
+                        meta={`Modifié le ${formatDate(folder.updatedAt)}`}
+                      />
                     </span>
                   </td>
-                  <td>—</td>
-                  <td>{formatDate(folder.updatedAt)}</td>
+                  <td className="cell-secondary">—</td>
+                  <td className="cell-secondary">{formatDate(folder.updatedAt)}</td>
                   <td className="explorer-row__actions">
                     <ActionsMenu
                       actions={folderActions(folder)}
@@ -130,24 +134,28 @@ export function SuivisPage() {
                       onToggle={() => setOpenMenuId((current) => (current === folder.id ? null : folder.id))}
                       onClose={() => setOpenMenuId(null)}
                       label={`Actions pour ${folder.name}`}
+                      title={folder.name}
                     />
                   </td>
                 </tr>
               ))}
               {files.map((file) => (
                 <tr key={file.id}>
-                  <td>
+                  <td className="cell-name">
                     <button
                       type="button"
                       className="explorer-row__name explorer-row__link"
                       onClick={() => setPreviewingFile(file)}
                     >
-                      <IconFile className="explorer-row__icon" />
-                      {file.name}
+                      <RowName
+                        icon={<IconFile className="explorer-row__icon" />}
+                        name={file.name}
+                        meta={`${formatSize(file.sizeBytes)} · ${formatDate(file.updatedAt)}`}
+                      />
                     </button>
                   </td>
-                  <td>{formatSize(file.sizeBytes)}</td>
-                  <td>{formatDate(file.updatedAt)}</td>
+                  <td className="cell-secondary">{formatSize(file.sizeBytes)}</td>
+                  <td className="cell-secondary">{formatDate(file.updatedAt)}</td>
                   <td className="explorer-row__actions">
                     <ActionsMenu
                       actions={fileActions(file)}
@@ -155,6 +163,7 @@ export function SuivisPage() {
                       onToggle={() => setOpenMenuId((current) => (current === file.id ? null : file.id))}
                       onClose={() => setOpenMenuId(null)}
                       label={`Actions pour ${file.name}`}
+                      title={file.name}
                     />
                   </td>
                 </tr>

@@ -52,9 +52,17 @@ export function FilePreviewModal({ file, onClose }: FilePreviewModalProps) {
 
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" onClick={onClose}>
-      <div className="modal modal--preview" onClick={(event) => event.stopPropagation()}>
+      <div className="modal modal--preview modal--fullscreen" onClick={(event) => event.stopPropagation()}>
         <div className="modal__header">
           <h2 className="modal__title">{file.name}</h2>
+          <button
+            type="button"
+            className="modal__download"
+            onClick={() => downloadFile(file.id, file.name)}
+            aria-label="Télécharger"
+          >
+            <IconDownload />
+          </button>
           <button type="button" className="modal__close" onClick={onClose} aria-label="Fermer l'aperçu">
             <IconClose />
           </button>

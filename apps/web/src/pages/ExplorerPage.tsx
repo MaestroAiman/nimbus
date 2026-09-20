@@ -1,7 +1,19 @@
 import { type ChangeEvent, type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { ActionsMenu, type MenuAction } from '../components/ActionsMenu';
 import { FilePreviewModal } from '../components/FilePreviewModal';
-import { IconFile, IconFolder, IconGridView, IconListView, IconNewFolder, IconUpload } from '../components/icons';
+import {
+  IconClose,
+  IconFile,
+  IconFolder,
+  IconGridView,
+  IconListView,
+  IconNewFolder,
+  IconUpload,
+} from '../components/icons';
+import { NameSheet } from '../components/NameSheet';
+import { RowName } from '../components/RowName';
+import { UploadSourceSheet } from '../components/UploadSourceSheet';
+import { useIsMobile } from '../lib/use-media-query';
 import {
   createFolder,
   deleteFile,
@@ -39,6 +51,8 @@ type ViewMode = 'list' | 'grid';
 const ROOT_CRUMB: Crumb = { id: null, name: 'Racine' };
 
 export function ExplorerPage() {
+  const isMobile = useIsMobile();
+  const [isChoosingUpload, setIsChoosingUpload] = useState(false);
   const [breadcrumb, setBreadcrumb] = useState<Crumb[]>([ROOT_CRUMB]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [files, setFiles] = useState<FileEntry[]>([]);
@@ -114,9 +128,13 @@ export function ExplorerPage() {
     setBreadcrumb((prev) => prev.slice(0, index + 1));
   }
 
-  async function handleCreateFolder(event: FormEvent) {
+  function handleCreateFolder(event: FormEvent) {
     event.preventDefault();
-    const name = newFolderName.trim();
+    return submitNewFolder(newFolderName);
+  }
+
+  async function submitNewFolder(rawName: string) {
+    const name = rawName.trim();
     if (!name) return;
 
     try {
@@ -150,10 +168,15 @@ export function ExplorerPage() {
     setRenaming(entry);
   }
 
-  async function handleRenameSubmit(event: FormEvent) {
+  function handleRenameSubmit(event: FormEvent) {
     event.preventDefault();
     if (!renaming) return;
-    const name = renaming.value.trim();
+    return submitRename(renaming.value);
+  }
+
+  async function submitRename(rawName: string) {
+    if (!renaming) return;
+    const name = rawName.trim();
     if (!name) return;
 
     try {
@@ -270,6 +293,8 @@ export function ExplorerPage() {
   }
 
   const isEmpty = !isLoading && folders.length === 0 && files.length === 0;
+  // Sur mobile le renommage passe par une feuille (NameSheet), pas par un formulaire dans la ligne.
+  const inlineRenaming = isMobile ? null : renaming;
 
   return (
     <div>
@@ -309,27 +334,38 @@ export function ExplorerPage() {
           <input ref={fileInputRef} type="file" hidden onChange={handleUploadChange} />
           <button
             type="button"
-            className="button button--secondary"
+            className="button button--secondary explorer__action-upload"
             disabled={uploadProgress !== null}
-            onClick={() => fileInputRef.current?.click()}
+            aria-label="Envoyer un fichier"
+            onClick={() => (isMobile ? setIsChoosingUpload(true) : fileInputRef.current?.click())}
           >
             <IconUpload />
-            {uploadProgress !== null ? `Envoi… ${uploadProgress}%` : 'Envoyer un fichier'}
+            <span className="button__label">
+              {uploadProgress !== null ? `Envoi… ${uploadProgress}%` : 'Envoyer un fichier'}
+            </span>
           </button>
-          <button type="button" className="button" onClick={() => setIsCreatingFolder(true)}>
+          <button
+            type="button"
+            className="button explorer__action-new-folder"
+            aria-label="Nouveau dossier"
+            onClick={() => setIsCreatingFolder(true)}
+          >
             <IconNewFolder />
-            Nouveau dossier
+            <span className="button__label">Nouveau dossier</span>
           </button>
         </div>
       </div>
 
       {uploadProgress !== null && (
-        <div className="explorer__progress">
-          <div className="explorer__progress-bar" style={{ width: `${uploadProgress}%` }} />
-        </div>
+        <>
+          <div className="explorer__progress">
+            <div className="explorer__progress-bar" style={{ width: `${uploadProgress}%` }} />
+          </div>
+          <p className="explorer__progress-label">Envoi… {uploadProgress}%</p>
+        </>
       )}
 
-      {isCreatingFolder && (
+      {isCreatingFolder && !isMobile && (
         <form className="explorer__inline-form" onSubmit={handleCreateFolder}>
           <input
             type="text"
@@ -380,14 +416,14 @@ export function ExplorerPage() {
             <tbody>
               {folders.map((folder) => (
                 <tr key={folder.id}>
-                  <td>
-                    {renaming?.type === 'folder' && renaming.id === folder.id ? (
+                  <td className="cell-name">
+                    {inlineRenaming?.type === 'folder' && inlineRenaming.id === folder.id ? (
                       <form className="explorer__inline-form" onSubmit={handleRenameSubmit}>
                         <input
                           type="text"
                           autoFocus
-                          value={renaming.value}
-                          onChange={(event) => setRenaming({ ...renaming, value: event.target.value })}
+                          value={inlineRenaming.value}
+                          onChange={(event) => setRenaming({ ...inlineRenaming, value: event.target.value })}
                         />
                         <button type="submit" className="button">
                           OK
@@ -402,13 +438,16 @@ export function ExplorerPage() {
                         className="explorer-row__name explorer-row__link"
                         onClick={() => openFolder(folder)}
                       >
-                        <IconFolder className="explorer-row__icon" />
-                        {folder.name}
+                        <RowName
+                          icon={<IconFolder className="explorer-row__icon" />}
+                          name={folder.name}
+                          meta={`Modifié le ${formatDate(folder.updatedAt)}`}
+                        />
                       </button>
                     )}
                   </td>
-                  <td>—</td>
-                  <td>{formatDate(folder.updatedAt)}</td>
+                  <td className="cell-secondary">—</td>
+                  <td className="cell-secondary">{formatDate(folder.updatedAt)}</td>
                   <td className="explorer-row__actions">
                     <ActionsMenu
                       actions={folderActions(folder)}
@@ -416,20 +455,21 @@ export function ExplorerPage() {
                       onToggle={() => setOpenMenuId((current) => (current === folder.id ? null : folder.id))}
                       onClose={() => setOpenMenuId(null)}
                       label={`Actions pour ${folder.name}`}
+                      title={folder.name}
                     />
                   </td>
                 </tr>
               ))}
               {files.map((file) => (
                 <tr key={file.id}>
-                  <td>
-                    {renaming?.type === 'file' && renaming.id === file.id ? (
+                  <td className="cell-name">
+                    {inlineRenaming?.type === 'file' && inlineRenaming.id === file.id ? (
                       <form className="explorer__inline-form" onSubmit={handleRenameSubmit}>
                         <input
                           type="text"
                           autoFocus
-                          value={renaming.value}
-                          onChange={(event) => setRenaming({ ...renaming, value: event.target.value })}
+                          value={inlineRenaming.value}
+                          onChange={(event) => setRenaming({ ...inlineRenaming, value: event.target.value })}
                         />
                         <button type="submit" className="button">
                           OK
@@ -444,13 +484,16 @@ export function ExplorerPage() {
                         className="explorer-row__name explorer-row__link"
                         onClick={() => setPreviewingFile(file)}
                       >
-                        <IconFile className="explorer-row__icon" />
-                        {file.name}
+                        <RowName
+                          icon={<IconFile className="explorer-row__icon" />}
+                          name={file.name}
+                          meta={`${formatSize(file.sizeBytes)} · ${formatDate(file.updatedAt)}`}
+                        />
                       </button>
                     )}
                   </td>
-                  <td>{formatSize(file.sizeBytes)}</td>
-                  <td>{formatDate(file.updatedAt)}</td>
+                  <td className="cell-secondary">{formatSize(file.sizeBytes)}</td>
+                  <td className="cell-secondary">{formatDate(file.updatedAt)}</td>
                   <td className="explorer-row__actions">
                     <ActionsMenu
                       actions={fileActions(file)}
@@ -458,6 +501,7 @@ export function ExplorerPage() {
                       onToggle={() => setOpenMenuId((current) => (current === file.id ? null : file.id))}
                       onClose={() => setOpenMenuId(null)}
                       label={`Actions pour ${file.name}`}
+                      title={file.name}
                     />
                   </td>
                 </tr>
@@ -468,15 +512,15 @@ export function ExplorerPage() {
       ) : (
         <div className="explorer-grid">
           {folders.map((folder) =>
-            renaming?.type === 'folder' && renaming.id === folder.id ? (
+            inlineRenaming?.type === 'folder' && inlineRenaming.id === folder.id ? (
               <div key={folder.id} className="explorer-grid__item">
                 <IconFolder width={28} height={28} strokeWidth={1.3} />
                 <form className="explorer__inline-form explorer__inline-form--grid" onSubmit={handleRenameSubmit}>
                   <input
                     type="text"
                     autoFocus
-                    value={renaming.value}
-                    onChange={(event) => setRenaming({ ...renaming, value: event.target.value })}
+                    value={inlineRenaming.value}
+                    onChange={(event) => setRenaming({ ...inlineRenaming, value: event.target.value })}
                   />
                   <button type="submit" className="button">
                     OK
@@ -507,6 +551,7 @@ export function ExplorerPage() {
                     onToggle={() => setOpenMenuId((current) => (current === folder.id ? null : folder.id))}
                     onClose={() => setOpenMenuId(null)}
                     label={`Actions pour ${folder.name}`}
+                    title={folder.name}
                   />
                 </div>
                 <IconFolder width={28} height={28} strokeWidth={1.3} />
@@ -516,15 +561,15 @@ export function ExplorerPage() {
             ),
           )}
           {files.map((file) =>
-            renaming?.type === 'file' && renaming.id === file.id ? (
+            inlineRenaming?.type === 'file' && inlineRenaming.id === file.id ? (
               <div key={file.id} className="explorer-grid__item">
                 <IconFile width={28} height={28} strokeWidth={1.3} />
                 <form className="explorer__inline-form explorer__inline-form--grid" onSubmit={handleRenameSubmit}>
                   <input
                     type="text"
                     autoFocus
-                    value={renaming.value}
-                    onChange={(event) => setRenaming({ ...renaming, value: event.target.value })}
+                    value={inlineRenaming.value}
+                    onChange={(event) => setRenaming({ ...inlineRenaming, value: event.target.value })}
                   />
                   <button type="submit" className="button">
                     OK
@@ -555,6 +600,7 @@ export function ExplorerPage() {
                     onToggle={() => setOpenMenuId((current) => (current === file.id ? null : file.id))}
                     onClose={() => setOpenMenuId(null)}
                     label={`Actions pour ${file.name}`}
+                    title={file.name}
                   />
                 </div>
                 <IconFile width={28} height={28} strokeWidth={1.3} />
@@ -566,10 +612,47 @@ export function ExplorerPage() {
         </div>
       )}
 
+      {isMobile && isCreatingFolder && (
+        <NameSheet
+          title="Nouveau dossier"
+          placeholder="Nom du dossier"
+          submitLabel="Créer"
+          onSubmit={submitNewFolder}
+          onClose={() => {
+            setIsCreatingFolder(false);
+            setNewFolderName('');
+          }}
+        />
+      )}
+
+      {isMobile && renaming && (
+        <NameSheet
+          title="Renommer"
+          initialValue={renaming.value}
+          submitLabel="Renommer"
+          onSubmit={submitRename}
+          onClose={() => setRenaming(null)}
+        />
+      )}
+
+      {isMobile && isChoosingUpload && (
+        <UploadSourceSheet onChange={handleUploadChange} onClose={() => setIsChoosingUpload(false)} />
+      )}
+
       {moving && (
         <div className="modal-overlay" role="dialog" aria-modal="true">
-          <div className="modal">
-            <h2>Déplacer « {moving.name} »</h2>
+          <div className="modal modal--fullscreen">
+            <div className="modal__header">
+              <h2 className="modal__title">Déplacer « {moving.name} »</h2>
+              <button
+                type="button"
+                className="modal__close modal__close--mobile"
+                onClick={() => setMoving(null)}
+                aria-label="Fermer"
+              >
+                <IconClose />
+              </button>
+            </div>
             <div className="explorer__breadcrumb">
               {pickerBreadcrumb.map((crumb, index) => (
                 <span key={crumb.id ?? 'root'}>
