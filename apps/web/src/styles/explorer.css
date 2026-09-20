@@ -142,6 +142,25 @@
   transition: width 0.15s ease;
 }
 
+/* Voile plein ecran pendant un glisser-deposer : ne capte aucun evenement souris. */
+.explorer__dropzone {
+  position: fixed;
+  inset: var(--space-md);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  border: 2px dashed var(--color-accent);
+  border-radius: var(--radius-xl);
+  background: rgba(1, 1, 2, 0.78);
+  color: var(--color-accent-hover);
+  font-size: 15px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;

@@ -5,6 +5,7 @@ import { IconFile, IconFolder, IconStar } from '../components/icons';
 import { RowName } from '../components/RowName';
 import {
   downloadFile,
+  downloadFolder,
   type FileEntry,
   type Folder,
   formatDate,
@@ -66,8 +67,19 @@ export function SuivisPage() {
     }
   }
 
+  async function handleDownloadFolder(folder: Folder) {
+    try {
+      await downloadFolder(folder.id, folder.name);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible de télécharger le dossier');
+    }
+  }
+
   function folderActions(folder: Folder): MenuAction[] {
-    return [{ label: 'Retirer des favoris', onClick: () => handleRemoveFolderFavorite(folder) }];
+    return [
+      { label: 'Télécharger', onClick: () => handleDownloadFolder(folder) },
+      { label: 'Retirer des favoris', onClick: () => handleRemoveFolderFavorite(folder) },
+    ];
   }
 
   function fileActions(file: FileEntry): MenuAction[] {

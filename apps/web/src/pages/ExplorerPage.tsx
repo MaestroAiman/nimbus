@@ -19,6 +19,7 @@ import {
   deleteFile,
   deleteFolder,
   downloadFile,
+  downloadFolder,
   type FileEntry,
   type Folder,
   formatDate,
@@ -26,8 +27,14 @@ import {
   listFolder,
   updateFile,
   updateFolder,
-  uploadFile,
 } from '../lib/files-api';
+import {
+  contentFromDrop,
+  contentFromFiles,
+  type UploadContent,
+  type UploadProgress,
+  uploadContent,
+} from '../lib/folder-upload';
 
 interface Crumb {
   id: string | null;
@@ -63,7 +70,8 @@ export function ExplorerPage() {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [renaming, setRenaming] = useState<RenamingEntry | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [upload, setUpload] = useState<UploadProgress | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const [previewingFile, setPreviewingFile] = useState<FileEntry | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -75,6 +83,7 @@ export function ExplorerPage() {
   const [pickerError, setPickerError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const currentFolderId = breadcrumb[breadcrumb.length - 1].id;
   const pickerFolderId = pickerBreadcrumb[pickerBreadcrumb.length - 1].id;
@@ -95,6 +104,13 @@ export function ExplorerPage() {
 
   useEffect(() => {
     refresh();
+  }, [refresh]);
+
+  // Un envoi peut durer longtemps : a sa fin on rafraichit le dossier affiche a cet instant,
+  // pas celui ou l'envoi a demarre (l'utilisateur a pu naviguer entre-temps).
+  const refreshRef = useRef(refresh);
+  useEffect(() => {
+    refreshRef.current = refresh;
   }, [refresh]);
 
   useEffect(() => {
@@ -147,22 +163,100 @@ export function ExplorerPage() {
     }
   }
 
-  async function handleUploadChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-
+  async function startUpload(content: UploadContent) {
     setError(null);
-    setUploadProgress(0);
+    setUpload({ percent: 0, sentFiles: 0, totalFiles: 0 });
+    let failure: string | null = null;
+
     try {
-      await uploadFile(file, currentFolderId, setUploadProgress);
-      await refresh();
+      const summary = await uploadContent(content, currentFolderId, setUpload);
+      // `error` peut exister sans fichier en echec : dossier vide dont la creation a echoue.
+      if (summary.error) {
+        failure =
+          summary.failedFiles === 0 || summary.totalFiles === 1
+            ? summary.error
+            : `${summary.failedFiles} fichier(s) sur ${summary.totalFiles} n'ont pas pu être envoyés : ${summary.error}`;
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Impossible d'envoyer le fichier");
+      failure = err instanceof Error ? err.message : "Impossible d'envoyer le fichier";
     } finally {
-      setUploadProgress(null);
+      setUpload(null);
     }
+
+    // Rafraichit aussi apres un echec partiel (des fichiers ou dossiers ont pu etre crees), puis affiche
+    // l'erreur : refresh() efface le message d'erreur en cours.
+    await refreshRef.current();
+    if (failure) setError(failure);
   }
+
+  async function handleUploadChange(event: ChangeEvent<HTMLInputElement>) {
+    // Copie avant de vider l'input, dont la remise a zero vide aussi sa liste de fichiers.
+    const selected = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    if (selected.length === 0) return;
+
+    await startUpload(contentFromFiles(selected));
+  }
+
+  // Le handler `drop` global doit toujours appeler la version la plus recente (dossier courant, etat).
+  const dropRef = useRef<(dataTransfer: DataTransfer) => void>(() => {});
+  useEffect(() => {
+    dropRef.current = (dataTransfer) => {
+      if (upload !== null) return;
+      // contentFromDrop lit dataTransfer de facon synchrone, avant que le navigateur ne l'invalide.
+      contentFromDrop(dataTransfer)
+        .then(startUpload)
+        .catch((err) => setError(err instanceof Error ? err.message : 'Impossible de lire le dossier déposé'));
+    };
+  });
+
+  // Glisser-deposer sur toute la fenetre (desktop) : evite aussi que le navigateur n'ouvre le fichier
+  // depose a cote de la zone. Le compteur gere les dragenter/dragleave emis par chaque element traverse.
+  useEffect(() => {
+    if (isMobile) return;
+
+    let depth = 0;
+    const hasFiles = (event: DragEvent) => event.dataTransfer?.types.includes('Files') ?? false;
+
+    function handleDragEnter(event: DragEvent) {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      depth += 1;
+      setIsDragging(true);
+    }
+
+    function handleDragOver(event: DragEvent) {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+    }
+
+    function handleDragLeave(event: DragEvent) {
+      if (!hasFiles(event)) return;
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) setIsDragging(false);
+    }
+
+    function handleDrop(event: DragEvent) {
+      if (!hasFiles(event) || !event.dataTransfer) return;
+      event.preventDefault();
+      depth = 0;
+      setIsDragging(false);
+      dropRef.current(event.dataTransfer);
+    }
+
+    window.addEventListener('dragenter', handleDragEnter);
+    window.addEventListener('dragover', handleDragOver);
+    window.addEventListener('dragleave', handleDragLeave);
+    window.addEventListener('drop', handleDrop);
+    return () => {
+      window.removeEventListener('dragenter', handleDragEnter);
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('dragleave', handleDragLeave);
+      window.removeEventListener('drop', handleDrop);
+      setIsDragging(false);
+    };
+  }, [isMobile]);
 
   function startRename(entry: RenamingEntry) {
     setRenaming(entry);
@@ -267,8 +361,17 @@ export function ExplorerPage() {
     }
   }
 
+  async function handleDownloadFolder(folder: Folder) {
+    try {
+      await downloadFolder(folder.id, folder.name);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible de télécharger le dossier');
+    }
+  }
+
   function folderActions(folder: Folder): MenuAction[] {
     return [
+      { label: 'Télécharger', onClick: () => handleDownloadFolder(folder) },
       {
         label: folder.isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris',
         onClick: () => handleToggleFolderFavorite(folder),
@@ -298,6 +401,12 @@ export function ExplorerPage() {
 
   return (
     <div>
+      {isDragging && (
+        <div className="explorer__dropzone" aria-hidden="true">
+          <IconUpload width={40} height={40} strokeWidth={1.3} />
+          <p>Déposez vos fichiers ou dossiers ici</p>
+        </div>
+      )}
       <div className="explorer__header">
         <div>
           <h1>Mes fichiers</h1>
@@ -331,19 +440,39 @@ export function ExplorerPage() {
               <IconGridView />
             </button>
           </div>
-          <input ref={fileInputRef} type="file" hidden onChange={handleUploadChange} />
+          <input ref={fileInputRef} type="file" multiple hidden onChange={handleUploadChange} />
           <button
             type="button"
             className="button button--secondary explorer__action-upload"
-            disabled={uploadProgress !== null}
+            disabled={upload !== null}
             aria-label="Envoyer un fichier"
             onClick={() => (isMobile ? setIsChoosingUpload(true) : fileInputRef.current?.click())}
           >
             <IconUpload />
-            <span className="button__label">
-              {uploadProgress !== null ? `Envoi… ${uploadProgress}%` : 'Envoyer un fichier'}
-            </span>
+            <span className="button__label">{upload !== null ? `Envoi… ${upload.percent}%` : 'Envoyer un fichier'}</span>
           </button>
+          {/* Sur mobile le selecteur de dossier n'est pas fiable (iOS) : l'envoi de dossier reste desktop. */}
+          {!isMobile && (
+            <>
+              <input
+                ref={folderInputRef}
+                type="file"
+                multiple
+                hidden
+                onChange={handleUploadChange}
+                {...{ webkitdirectory: '' }}
+              />
+              <button
+                type="button"
+                className="button button--secondary"
+                disabled={upload !== null}
+                onClick={() => folderInputRef.current?.click()}
+              >
+                <IconFolder />
+                <span className="button__label">Envoyer un dossier</span>
+              </button>
+            </>
+          )}
           <button
             type="button"
             className="button explorer__action-new-folder"
@@ -356,12 +485,15 @@ export function ExplorerPage() {
         </div>
       </div>
 
-      {uploadProgress !== null && (
+      {upload !== null && (
         <>
           <div className="explorer__progress">
-            <div className="explorer__progress-bar" style={{ width: `${uploadProgress}%` }} />
+            <div className="explorer__progress-bar" style={{ width: `${upload.percent}%` }} />
           </div>
-          <p className="explorer__progress-label">Envoi… {uploadProgress}%</p>
+          <p className="explorer__progress-label">
+            Envoi… {upload.percent}%
+            {upload.totalFiles > 1 && ` · ${upload.sentFiles}/${upload.totalFiles} fichiers`}
+          </p>
         </>
       )}
 

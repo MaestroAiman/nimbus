@@ -112,7 +112,24 @@ function parseXhrErrorMessage(xhr: XMLHttpRequest): string {
   }
 }
 
-export function uploadFile(file: File, folderId: string | null, onProgress?: (percent: number) => void): Promise<FileEntry> {
+export interface FolderTree {
+  root: Folder;
+  // Chemin relatif a la racine ("" = racine elle-meme) -> id du dossier cree.
+  folders: Record<string, string>;
+}
+
+// Cree la racine (renommee "Nom (2)" si le nom est pris) et tous ses sous-dossiers en une requete.
+export function createFolderTree(parentId: string | null, rootName: string, dirs: string[]): Promise<FolderTree> {
+  return request<FolderTree>('/folders/tree', { method: 'POST', body: JSON.stringify({ parentId, rootName, dirs }) });
+}
+
+export function uploadFile(
+  file: File,
+  folderId: string | null,
+  onProgress?: (percent: number) => void,
+  // `silent` : pas d'evenement d'activite (fichiers d'un dossier envoye, l'evenement du dossier suffit).
+  options?: { silent?: boolean },
+): Promise<FileEntry> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${API_BASE}/files`);
@@ -137,6 +154,7 @@ export function uploadFile(file: File, folderId: string | null, onProgress?: (pe
     const formData = new FormData();
     formData.append('file', file);
     if (folderId) formData.append('folderId', folderId);
+    if (options?.silent) formData.append('silent', 'true');
     xhr.send(formData);
   });
 }
@@ -174,14 +192,24 @@ export async function fetchFileBlob(id: string): Promise<Blob> {
 // vers le disque (pas de copie du fichier en memoire, pas de blob: a revoquer). Avec l'ancien
 // fetch+blob, revoquer l'URL juste apres le clic faisait echouer les gros fichiers. Le cookie
 // de session part avec le lien (meme origine) ; le nom vient de Content-Disposition.
-export function downloadFile(id: string, name: string): Promise<void> {
+function triggerDownload(href: string, name: string): Promise<void> {
   const link = document.createElement('a');
-  link.href = `${API_BASE}/files/${id}/download`;
+  link.href = href;
   link.download = name;
   document.body.appendChild(link);
   link.click();
   link.remove();
   return Promise.resolve();
+}
+
+export function downloadFile(id: string, name: string): Promise<void> {
+  return triggerDownload(`${API_BASE}/files/${id}/download`, name);
+}
+
+// Meme principe pour un dossier : l'API genere le ZIP a la volee, le navigateur l'ecrit sur disque
+// au fil de l'eau. Le nom reel (avec l'extension .zip) vient de Content-Disposition.
+export function downloadFolder(id: string, name: string): Promise<void> {
+  return triggerDownload(`${API_BASE}/folders/${id}/download`, `${name}.zip`);
 }
 
 export function listFavorites(): Promise<FolderContents> {

@@ -1,14 +1,52 @@
 import { unlink } from 'node:fs/promises';
 import { join } from 'node:path';
-import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createId } from '@paralleldrive/cuid2';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../database/database.provider.js';
 import type { Database } from '../db/client.js';
 import { files, folders } from '../db/schema/index.js';
+import type { CreateFolderTreeDto } from './dto/create-folder-tree.dto.js';
 import type { CreateFolderDto } from './dto/create-folder.dto.js';
 import type { UpdateFolderDto } from './dto/update-folder.dto.js';
+
+export interface DownloadEntries {
+  folder: typeof folders.$inferSelect;
+  /** Chemins de dossiers dans l'archive, avec "/" final (dossiers vides inclus). */
+  directories: string[];
+  files: { diskPath: string; entryName: string }[];
+}
+
+// Un segment de nom de dossier : non vide, sans separateur, ni "." ni "..".
+function isValidSegment(segment: string): boolean {
+  return segment.length > 0 && segment.length <= 255 && !/[/\\]/.test(segment) && segment !== '.' && segment !== '..';
+}
+
+// Nom utilisable comme segment de chemin dans une archive : jamais de separateur, de caractere
+// de controle, ni de "." / ".." (les noms de fichiers ne sont pas contraints a l'ecriture).
+function toEntrySegment(name: string): string {
+  // oxlint-disable-next-line no-control-regex
+  const cleaned = name.replace(/[\x00-\x1f/\\]/g, '_');
+  return cleaned === '' || cleaned === '.' || cleaned === '..' ? '_' : cleaned;
+}
+
+// Deux noms qui ne different que par la casse ecraseraient l'un l'autre a l'extraction sous Windows.
+function uniqueSegment(used: Set<string>, segment: string): string {
+  let candidate = segment;
+  for (let n = 2; used.has(candidate.toLowerCase()); n += 1) {
+    const dot = segment.lastIndexOf('.');
+    candidate = dot > 0 ? `${segment.slice(0, dot)} (${n})${segment.slice(dot)}` : `${segment} (${n})`;
+  }
+  used.add(candidate.toLowerCase());
+  return candidate;
+}
+
+// Drizzle enveloppe l'erreur pg : le code SQLSTATE est sur `cause` (ou sur l'erreur elle-meme).
+function isUniqueViolation(error: unknown): boolean {
+  const { code, cause } = error as { code?: string; cause?: { code?: string } };
+  return (code ?? cause?.code) === '23505';
+}
 
 @Injectable()
 export class FoldersService {
@@ -30,6 +68,136 @@ export class FoldersService {
       .returning();
 
     return folder;
+  }
+
+  /**
+   * Cree en une transaction un dossier racine (renomme "Nom (2)", "Nom (3)"... s'il existe deja)
+   * et tous ses sous-dossiers. `folders` associe chaque chemin relatif a l'id cree ("" = racine).
+   */
+  async createTree(ownerId: string, dto: CreateFolderTreeDto) {
+    const parentId = dto.parentId ?? null;
+    if (parentId) {
+      await this.getOwnedFolder(ownerId, parentId);
+    }
+
+    if (!isValidSegment(dto.rootName)) {
+      throw new BadRequestException('Nom de dossier invalide');
+    }
+
+    // Un chemin "a/b" implique "a" : on complete les ancetres pour ne jamais avoir de parent manquant.
+    const paths = new Set<string>();
+    for (const dir of dto.dirs) {
+      const segments = dir.split('/');
+      if (!segments.every(isValidSegment)) {
+        throw new BadRequestException(`Chemin de dossier invalide : ${dir}`);
+      }
+      for (let depth = 1; depth <= segments.length; depth += 1) {
+        paths.add(segments.slice(0, depth).join('/'));
+      }
+    }
+
+    const byDepth = new Map<number, string[]>();
+    for (const path of paths) {
+      const depth = path.split('/').length;
+      byDepth.set(depth, [...(byDepth.get(depth) ?? []), path]);
+    }
+
+    const rootName = await this.findAvailableName(ownerId, parentId, dto.rootName);
+
+    try {
+      return await this.db.transaction(async (tx) => {
+        const [root] = await tx.insert(folders).values({ id: createId(), name: rootName, ownerId, parentId }).returning();
+
+        const idByPath = new Map<string, string>([['', root.id]]);
+        for (let depth = 1; byDepth.has(depth); depth += 1) {
+          const rows = byDepth.get(depth)!.map((path) => {
+            const segments = path.split('/');
+            return {
+              path,
+              id: createId(),
+              name: segments[segments.length - 1],
+              parentId: idByPath.get(segments.slice(0, -1).join('/'))!,
+            };
+          });
+
+          await tx.insert(folders).values(rows.map(({ path: _path, ...row }) => ({ ...row, ownerId })));
+          for (const row of rows) idByPath.set(row.path, row.id);
+        }
+
+        return { root, folders: Object.fromEntries(idByPath) };
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ConflictException('Un dossier de ce nom existe deja, reessayez');
+      }
+      throw error;
+    }
+  }
+
+  /** Premier nom libre dans le dossier parent : `name`, puis `name (2)`, `name (3)`... */
+  async findAvailableName(ownerId: string, parentId: string | null, name: string): Promise<string> {
+    const siblings = await this.db
+      .select({ name: folders.name })
+      .from(folders)
+      .where(
+        and(
+          eq(folders.ownerId, ownerId),
+          parentId ? eq(folders.parentId, parentId) : isNull(folders.parentId),
+          isNull(folders.deletedAt),
+        ),
+      );
+    const taken = new Set(siblings.map((sibling) => sibling.name));
+
+    let candidate = name;
+    for (let n = 2; taken.has(candidate); n += 1) {
+      candidate = `${name} (${n})`;
+    }
+    return candidate;
+  }
+
+  /**
+   * Contenu d'un dossier pour son archive ZIP. Contrairement a collectFolderSubtreeIds (qui inclut la
+   * corbeille pour supprimer/restaurer), ignore ici tout ce qui est en corbeille.
+   */
+  async getDownloadEntries(ownerId: string, id: string): Promise<DownloadEntries> {
+    const folder = await this.getOwnedFolder(ownerId, id);
+    const rootSegment = toEntrySegment(folder.name);
+
+    const directories = [`${rootSegment}/`];
+    const pathById = new Map<string, string>([[id, rootSegment]]);
+    // Noms deja pris dans chaque dossier de l'archive, pour dedoublonner dossiers et fichiers.
+    const usedByFolder = new Map<string, Set<string>>([[id, new Set()]]);
+    let frontier = [id];
+
+    while (frontier.length > 0) {
+      const children = await this.db
+        .select({ id: folders.id, name: folders.name, parentId: folders.parentId })
+        .from(folders)
+        .where(and(eq(folders.ownerId, ownerId), inArray(folders.parentId, frontier), isNull(folders.deletedAt)))
+        .orderBy(asc(folders.name));
+
+      for (const child of children) {
+        const used = usedByFolder.get(child.parentId!)!;
+        const path = `${pathById.get(child.parentId!)}/${uniqueSegment(used, toEntrySegment(child.name))}`;
+        pathById.set(child.id, path);
+        usedByFolder.set(child.id, new Set());
+        directories.push(`${path}/`);
+      }
+      frontier = children.map((child) => child.id);
+    }
+
+    const rows = await this.db
+      .select({ folderId: files.folderId, name: files.name, diskPath: files.diskPath })
+      .from(files)
+      .where(and(eq(files.ownerId, ownerId), inArray(files.folderId, [...pathById.keys()]), isNull(files.deletedAt)))
+      .orderBy(asc(files.name));
+
+    const entries = rows.map((row) => ({
+      diskPath: row.diskPath,
+      entryName: `${pathById.get(row.folderId!)}/${uniqueSegment(usedByFolder.get(row.folderId!)!, toEntrySegment(row.name))}`,
+    }));
+
+    return { folder, directories, files: entries };
   }
 
   async listContents(ownerId: string, parentId: string | null) {

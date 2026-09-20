@@ -19,6 +19,7 @@ import { ActivityService } from '../activity/activity.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import type { AuthUser } from '../auth/session.types.js';
+import { buildContentDisposition } from '../common/content-disposition.js';
 import { UpdateFileDto } from './dto/update-file.dto.js';
 import { FilesService } from './files.service.js';
 
@@ -36,9 +37,13 @@ export class FilesController {
     @CurrentUser() user: AuthUser,
     @UploadedFile() file: Express.Multer.File,
     @Body('folderId') folderId?: string,
+    // Envoi d'un dossier : les fichiers sont crees sans evenement, l'evenement du dossier suffit.
+    @Body('silent') silent?: string,
   ) {
     const created = await this.filesService.create(user.id, file, folderId ?? null);
-    await this.activityService.record(user.id, 'file.created', 'file', created.id, created.name);
+    if (silent !== 'true') {
+      await this.activityService.record(user.id, 'file.created', 'file', created.id, created.name);
+    }
     return created;
   }
 
@@ -51,12 +56,10 @@ export class FilesController {
     const { file, stream } = await this.filesService.getDownloadStream(user.id, id);
 
     // Le telechargement est fait par un lien direct du navigateur (voir downloadFile cote web) :
-    // le nom enregistre vient de cet en-tete. `filename*` (RFC 5987) porte le nom UTF-8 exact,
-    // `filename` n'est qu'un repli ASCII pour les vieux clients (sans guillemets ni controle).
-    const asciiFallback = file.name.replace(/[^\x20-\x7e]|["\\%]/g, '_');
+    // le nom enregistre vient de cet en-tete.
     response.set({
       'Content-Type': file.mimeType,
-      'Content-Disposition': `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(file.name).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)}`,
+      'Content-Disposition': buildContentDisposition(file.name),
       'Content-Length': file.sizeBytes.toString(),
     });
 
