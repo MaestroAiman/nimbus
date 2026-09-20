@@ -170,14 +170,18 @@ export async function fetchFileBlob(id: string): Promise<Blob> {
   return response.blob();
 }
 
-export async function downloadFile(id: string, name: string): Promise<void> {
-  const blob = await fetchFileBlob(id);
-  const url = URL.createObjectURL(blob);
+// Lien direct vers l'API plutot que fetch + blob : le navigateur telecharge en streaming
+// vers le disque (pas de copie du fichier en memoire, pas de blob: a revoquer). Avec l'ancien
+// fetch+blob, revoquer l'URL juste apres le clic faisait echouer les gros fichiers. Le cookie
+// de session part avec le lien (meme origine) ; le nom vient de Content-Disposition.
+export function downloadFile(id: string, name: string): Promise<void> {
   const link = document.createElement('a');
-  link.href = url;
+  link.href = `${API_BASE}/files/${id}/download`;
   link.download = name;
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  link.remove();
+  return Promise.resolve();
 }
 
 export function listFavorites(): Promise<FolderContents> {

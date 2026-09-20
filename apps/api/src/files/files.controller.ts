@@ -50,9 +50,13 @@ export class FilesController {
   ): Promise<StreamableFile> {
     const { file, stream } = await this.filesService.getDownloadStream(user.id, id);
 
+    // Le telechargement est fait par un lien direct du navigateur (voir downloadFile cote web) :
+    // le nom enregistre vient de cet en-tete. `filename*` (RFC 5987) porte le nom UTF-8 exact,
+    // `filename` n'est qu'un repli ASCII pour les vieux clients (sans guillemets ni controle).
+    const asciiFallback = file.name.replace(/[^\x20-\x7e]|["\\%]/g, '_');
     response.set({
       'Content-Type': file.mimeType,
-      'Content-Disposition': `attachment; filename="${encodeURIComponent(file.name)}"`,
+      'Content-Disposition': `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(file.name).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)}`,
       'Content-Length': file.sizeBytes.toString(),
     });
 
