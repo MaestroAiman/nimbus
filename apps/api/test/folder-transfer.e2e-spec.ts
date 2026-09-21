@@ -90,6 +90,31 @@ describe('Envoi et telechargement de dossiers (e2e)', () => {
     ]);
   });
 
+  it('cree une tres grosse arborescence (corps JSON > 100 Ko) et refuse un nombre de dossiers demesure', async () => {
+    const { cookies } = await newUser('tree-big');
+
+    // 20 dossiers x 200 sous-dossiers, chemins assez longs pour depasser largement 100 Ko de JSON
+    const dirs = Array.from({ length: 20 }, (_, i) =>
+      Array.from({ length: 200 }, (_, j) => `paquet-numero-${i}/sous-dossier-avec-un-nom-long-${j}`),
+    ).flat();
+    expect(JSON.stringify({ dirs }).length).toBeGreaterThan(100 * 1024);
+
+    const response = await createTree(cookies, { rootName: 'Gros', dirs }).expect(201);
+    const body = response.body as TreeBody;
+
+    // 4000 sous-dossiers + 20 intermediaires + la racine
+    expect(Object.keys(body.folders)).toHaveLength(dirs.length + 20 + 1);
+
+    const level1 = await request(app.getHttpServer())
+      .get(`/api/folders?parentId=${body.folders['paquet-numero-7']}`)
+      .set('Cookie', cookies)
+      .expect(200);
+    expect(level1.body.folders).toHaveLength(200);
+
+    const tooMany = Array.from({ length: 50_001 }, (_, i) => `d${i}`);
+    await createTree(cookies, { rootName: 'Demesure', dirs: tooMany }).expect(400);
+  });
+
   it("cree l'arborescence dans un dossier parent et ignore les dossiers en corbeille pour le nom libre", async () => {
     const { cookies } = await newUser('tree-parent');
     const parent = await request(app.getHttpServer())

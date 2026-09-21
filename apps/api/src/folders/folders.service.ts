@@ -18,6 +18,8 @@ export interface DownloadEntries {
   files: { diskPath: string; entryName: string }[];
 }
 
+const INSERT_BATCH_SIZE = 5000;
+
 // Un segment de nom de dossier : non vide, sans separateur, ni "." ni "..".
 function isValidSegment(segment: string): boolean {
   return segment.length > 0 && segment.length <= 255 && !/[/\\]/.test(segment) && segment !== '.' && segment !== '..';
@@ -99,7 +101,9 @@ export class FoldersService {
     const byDepth = new Map<number, string[]>();
     for (const path of paths) {
       const depth = path.split('/').length;
-      byDepth.set(depth, [...(byDepth.get(depth) ?? []), path]);
+      const level = byDepth.get(depth);
+      if (level) level.push(path);
+      else byDepth.set(depth, [path]);
     }
 
     const rootName = await this.findAvailableName(ownerId, parentId, dto.rootName);
@@ -120,7 +124,11 @@ export class FoldersService {
             };
           });
 
-          await tx.insert(folders).values(rows.map(({ path: _path, ...row }) => ({ ...row, ownerId })));
+          // Par paquets : Postgres limite une requete a 65 535 parametres (4 par ligne ici).
+          for (let start = 0; start < rows.length; start += INSERT_BATCH_SIZE) {
+            const batch = rows.slice(start, start + INSERT_BATCH_SIZE);
+            await tx.insert(folders).values(batch.map(({ path: _path, ...row }) => ({ ...row, ownerId })));
+          }
           for (const row of rows) idByPath.set(row.path, row.id);
         }
 

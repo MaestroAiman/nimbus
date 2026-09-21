@@ -1,10 +1,10 @@
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { eq } from 'drizzle-orm';
-import express from 'express';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
 import { betterAuthHandler } from '../../src/auth/better-auth-handler.js';
+import { useBodyParsers } from '../../src/config/body-parsers.js';
 import { DRIZZLE_DB } from '../../src/database/database.provider.js';
 import type { Database } from '../../src/db/client.js';
 import { users } from '../../src/db/schema/index.js';
@@ -15,8 +15,7 @@ export async function createTestApp(): Promise<INestApplication> {
   const app = moduleFixture.createNestApplication({ bodyParser: false });
   app.setGlobalPrefix('api');
   app.use('/api/auth/*splat', betterAuthHandler);
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  useBodyParsers(app);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }));
   await app.init();
 

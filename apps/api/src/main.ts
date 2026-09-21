@@ -1,9 +1,9 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import express from 'express';
 import { AppModule } from './app.module.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { betterAuthHandler } from './auth/better-auth-handler.js';
+import { useBodyParsers } from './config/body-parsers.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
@@ -22,8 +22,7 @@ async function bootstrap() {
   // il est monte avant les parseurs de corps Express/Nest.
   app.use('/api/auth/*splat', betterAuthHandler);
 
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  useBodyParsers(app);
 
   app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }));

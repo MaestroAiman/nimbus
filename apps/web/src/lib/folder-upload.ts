@@ -38,7 +38,8 @@ function errorMessage(error: unknown): string {
  * Limite du navigateur : les dossiers locaux vides n'apparaissent pas dans cette liste.
  */
 export function contentFromFiles(files: File[]): UploadContent {
-  const trees = new Map<string, UploadTree>();
+  // Set par racine : un gros dossier compte des dizaines de milliers de fichiers pour des milliers de chemins.
+  const trees = new Map<string, { tree: UploadTree; dirs: Set<string> }>();
   const looseFiles: File[] = [];
 
   for (const file of files) {
@@ -50,17 +51,20 @@ export function contentFromFiles(files: File[]): UploadContent {
 
     const [rootName, ...rest] = segments;
     const dir = rest.slice(0, -1).join('/');
-    let tree = trees.get(rootName);
-    if (!tree) {
-      tree = { rootName, dirs: [], files: [] };
-      trees.set(rootName, tree);
+    let entry = trees.get(rootName);
+    if (!entry) {
+      entry = { tree: { rootName, dirs: [], files: [] }, dirs: new Set() };
+      trees.set(rootName, entry);
     }
     // L'API complete elle-meme les ancetres d'un chemin ("a/b" cree aussi "a").
-    if (dir && !tree.dirs.includes(dir)) tree.dirs.push(dir);
-    tree.files.push({ file, dir });
+    if (dir) entry.dirs.add(dir);
+    entry.tree.files.push({ file, dir });
   }
 
-  return { trees: [...trees.values()], looseFiles };
+  return {
+    trees: [...trees.values()].map(({ tree, dirs }) => ({ ...tree, dirs: [...dirs] })),
+    looseFiles,
+  };
 }
 
 function readAllEntries(reader: FileSystemDirectoryReader): Promise<FileSystemEntry[]> {
