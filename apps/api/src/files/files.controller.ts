@@ -66,6 +66,11 @@ export class FilesController {
     return new StreamableFile(stream);
   }
 
+  @Get(':id/properties')
+  properties(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.filesService.getProperties(user.id, id);
+  }
+
   @Patch(':id')
   async update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: UpdateFileDto) {
     const updated = await this.filesService.update(user.id, id, dto);

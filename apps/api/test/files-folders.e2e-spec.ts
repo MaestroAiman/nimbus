@@ -218,4 +218,62 @@ describe('Folders & Files (e2e)', () => {
     // Le nom "Archives" redevient disponible a la racine malgre le dossier homonyme en corbeille
     await request(server).post('/api/folders').set('Cookie', cookies).send({ name: 'Archives' }).expect(201);
   });
+
+  it("renvoie l'emplacement, la taille cumulee et le contenu (hors corbeille) via les proprietes", async () => {
+    const server = app.getHttpServer();
+    const { cookies } = await signUpAndSignIn(app, `props-${Date.now()}@nimbus.local`, 'correct-horse-battery-staple');
+    const other = await signUpAndSignIn(app, `props-other-${Date.now()}@nimbus.local`, 'correct-horse-battery-staple');
+
+    const a = await request(server).post('/api/folders').set('Cookie', cookies).send({ name: 'A' }).expect(201);
+    const b = await request(server)
+      .post('/api/folders')
+      .set('Cookie', cookies)
+      .send({ name: 'B', parentId: a.body.id })
+      .expect(201);
+    const c = await request(server)
+      .post('/api/folders')
+      .set('Cookie', cookies)
+      .send({ name: 'C', parentId: a.body.id })
+      .expect(201);
+
+    const inA = await request(server)
+      .post('/api/files')
+      .set('Cookie', cookies)
+      .field('folderId', a.body.id)
+      .attach('file', Buffer.alloc(10, 'a'), 'a.txt')
+      .expect(201);
+    const inB = await request(server)
+      .post('/api/files')
+      .set('Cookie', cookies)
+      .field('folderId', b.body.id)
+      .attach('file', Buffer.alloc(100, 'b'), 'b.txt')
+      .expect(201);
+    const trashed = await request(server)
+      .post('/api/files')
+      .set('Cookie', cookies)
+      .field('folderId', b.body.id)
+      .attach('file', Buffer.alloc(1000, 'c'), 'c.txt')
+      .expect(201);
+    await request(server).delete(`/api/files/${trashed.body.id}`).set('Cookie', cookies).expect(200);
+    // Un sous-dossier en corbeille (avec son contenu) n'est pas compte non plus.
+    await request(server).delete(`/api/folders/${c.body.id}`).set('Cookie', cookies).expect(200);
+
+    const folderProps = await request(server).get(`/api/folders/${a.body.id}/properties`).set('Cookie', cookies).expect(200);
+    expect(folderProps.body).toEqual({ path: [], sizeBytes: 110, fileCount: 2, folderCount: 1 });
+
+    const nestedFolderProps = await request(server)
+      .get(`/api/folders/${b.body.id}/properties`)
+      .set('Cookie', cookies)
+      .expect(200);
+    expect(nestedFolderProps.body).toEqual({ path: ['A'], sizeBytes: 100, fileCount: 1, folderCount: 0 });
+
+    const fileProps = await request(server).get(`/api/files/${inB.body.id}/properties`).set('Cookie', cookies).expect(200);
+    expect(fileProps.body).toEqual({ path: ['A', 'B'] });
+
+    const rootFileProps = await request(server).get(`/api/files/${inA.body.id}/properties`).set('Cookie', cookies).expect(200);
+    expect(rootFileProps.body).toEqual({ path: ['A'] });
+
+    await request(server).get(`/api/folders/${a.body.id}/properties`).set('Cookie', other.cookies).expect(404);
+    await request(server).get(`/api/files/${inB.body.id}/properties`).set('Cookie', other.cookies).expect(404);
+  });
 });

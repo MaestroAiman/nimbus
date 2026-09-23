@@ -94,6 +94,11 @@ export class FoldersController {
     return new StreamableFile(archive);
   }
 
+  @Get(':id/properties')
+  properties(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.foldersService.getProperties(user.id, id);
+  }
+
   @Get()
   list(@CurrentUser() user: AuthUser, @Query('parentId') parentId?: string) {
     return this.foldersService.listContents(user.id, parentId ?? null);

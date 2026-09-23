@@ -53,6 +53,12 @@ export class FilesService {
     return { file, stream: createReadStream(absolutePath) };
   }
 
+  async getProperties(ownerId: string, id: string) {
+    const file = await this.getOwnedFile(ownerId, id);
+
+    return { path: await this.foldersService.getFolderPath(ownerId, file.folderId) };
+  }
+
   async update(ownerId: string, id: string, dto: UpdateFileDto) {
     await this.getOwnedFile(ownerId, id);
 

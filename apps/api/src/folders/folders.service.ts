@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createId } from '@paralleldrive/cuid2';
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNull, sum } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../database/database.provider.js';
 import type { Database } from '../db/client.js';
 import { files, folders } from '../db/schema/index.js';
@@ -332,8 +332,53 @@ export class FoldersService {
     return folder;
   }
 
-  /** Parcourt l'arborescence (peu importe l'etat de corbeille) et retourne id racine + tous ses descendants. */
-  private async collectFolderSubtreeIds(ownerId: string, rootId: string): Promise<string[]> {
+  /** Noms des dossiers ancetres, de la racine jusqu'a `folderId` inclus (vide si `folderId` est null : racine). */
+  async getFolderPath(ownerId: string, folderId: string | null): Promise<string[]> {
+    const path: string[] = [];
+    let currentId = folderId;
+
+    while (currentId !== null) {
+      const [folder] = await this.db
+        .select({ name: folders.name, parentId: folders.parentId })
+        .from(folders)
+        .where(and(eq(folders.id, currentId), eq(folders.ownerId, ownerId)));
+
+      if (!folder) break;
+
+      path.unshift(folder.name);
+      currentId = folder.parentId;
+    }
+
+    return path;
+  }
+
+  /** Emplacement, taille cumulee et contenu d'un dossier (la corbeille est ignoree). */
+  async getProperties(ownerId: string, id: string) {
+    const folder = await this.getOwnedFolder(ownerId, id);
+
+    const folderIds = await this.collectFolderSubtreeIds(ownerId, id, { excludeTrashed: true });
+    const [totals] = await this.db
+      .select({ fileCount: count(), sizeBytes: sum(files.sizeBytes) })
+      .from(files)
+      .where(and(eq(files.ownerId, ownerId), inArray(files.folderId, folderIds), isNull(files.deletedAt)));
+
+    return {
+      path: await this.getFolderPath(ownerId, folder.parentId),
+      sizeBytes: Number(totals.sizeBytes ?? 0),
+      fileCount: totals.fileCount,
+      folderCount: folderIds.length - 1,
+    };
+  }
+
+  /**
+   * Parcourt l'arborescence et retourne id racine + tous ses descendants. Inclut la corbeille par defaut
+   * (suppression/restauration), sauf avec `excludeTrashed`.
+   */
+  private async collectFolderSubtreeIds(
+    ownerId: string,
+    rootId: string,
+    options?: { excludeTrashed?: boolean },
+  ): Promise<string[]> {
     const ids = [rootId];
     let frontier = [rootId];
 
@@ -341,7 +386,13 @@ export class FoldersService {
       const children = await this.db
         .select({ id: folders.id })
         .from(folders)
-        .where(and(eq(folders.ownerId, ownerId), inArray(folders.parentId, frontier)));
+        .where(
+          and(
+            eq(folders.ownerId, ownerId),
+            inArray(folders.parentId, frontier),
+            options?.excludeTrashed ? isNull(folders.deletedAt) : undefined,
+          ),
+        );
 
       if (children.length === 0) break;
 
