@@ -551,6 +551,15 @@
     max-height: none;
   }
 
+  .preview-modal__nav {
+    width: 36px;
+    height: 36px;
+  }
+
+  .properties {
+    grid-template-columns: 92px minmax(0, 1fr);
+  }
+
   .preview-modal__frame {
     height: calc(100dvh - 120px);
   }

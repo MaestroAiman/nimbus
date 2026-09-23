@@ -11,6 +11,7 @@ import {
   IconUpload,
 } from '../components/icons';
 import { NameSheet } from '../components/NameSheet';
+import { PropertiesModal, type PropertiesTarget } from '../components/PropertiesModal';
 import { RowName } from '../components/RowName';
 import { UploadSourceSheet } from '../components/UploadSourceSheet';
 import { useIsMobile } from '../lib/use-media-query';
@@ -75,6 +76,7 @@ export function ExplorerPage() {
 
   const [previewingFile, setPreviewingFile] = useState<FileEntry | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [propertiesTarget, setPropertiesTarget] = useState<PropertiesTarget | null>(null);
 
   const [moving, setMoving] = useState<MovingEntry | null>(null);
   const [pickerBreadcrumb, setPickerBreadcrumb] = useState<Crumb[]>([ROOT_CRUMB]);
@@ -378,6 +380,7 @@ export function ExplorerPage() {
       },
       { label: 'Déplacer', onClick: () => startMove({ type: 'folder', id: folder.id, name: folder.name }) },
       { label: 'Renommer', onClick: () => startRename({ type: 'folder', id: folder.id, value: folder.name }) },
+      { label: 'Propriétés', onClick: () => setPropertiesTarget({ kind: 'folder', folder }) },
       { label: 'Supprimer', onClick: () => handleDeleteFolder(folder), danger: true },
     ];
   }
@@ -391,6 +394,7 @@ export function ExplorerPage() {
       },
       { label: 'Déplacer', onClick: () => startMove({ type: 'file', id: file.id, name: file.name }) },
       { label: 'Renommer', onClick: () => startRename({ type: 'file', id: file.id, value: file.name }) },
+      { label: 'Propriétés', onClick: () => setPropertiesTarget({ kind: 'file', file }) },
       { label: 'Supprimer', onClick: () => handleDeleteFile(file), danger: true },
     ];
   }
@@ -827,7 +831,16 @@ export function ExplorerPage() {
         </div>
       )}
 
-      {previewingFile && <FilePreviewModal file={previewingFile} onClose={() => setPreviewingFile(null)} />}
+      {previewingFile && (
+        <FilePreviewModal
+          file={previewingFile}
+          siblings={files}
+          onNavigate={setPreviewingFile}
+          onClose={() => setPreviewingFile(null)}
+        />
+      )}
+
+      {propertiesTarget && <PropertiesModal target={propertiesTarget} onClose={() => setPropertiesTarget(null)} />}
     </div>
   );
 }

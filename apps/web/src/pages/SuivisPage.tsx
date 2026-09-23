@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActionsMenu, type MenuAction } from '../components/ActionsMenu';
 import { FilePreviewModal } from '../components/FilePreviewModal';
 import { IconFile, IconFolder, IconStar } from '../components/icons';
+import { PropertiesModal, type PropertiesTarget } from '../components/PropertiesModal';
 import { RowName } from '../components/RowName';
 import {
   downloadFile,
@@ -22,6 +23,7 @@ export function SuivisPage() {
   const [error, setError] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [previewingFile, setPreviewingFile] = useState<FileEntry | null>(null);
+  const [propertiesTarget, setPropertiesTarget] = useState<PropertiesTarget | null>(null);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
@@ -79,6 +81,7 @@ export function SuivisPage() {
     return [
       { label: 'Télécharger', onClick: () => handleDownloadFolder(folder) },
       { label: 'Retirer des favoris', onClick: () => handleRemoveFolderFavorite(folder) },
+      { label: 'Propriétés', onClick: () => setPropertiesTarget({ kind: 'folder', folder }) },
     ];
   }
 
@@ -86,6 +89,7 @@ export function SuivisPage() {
     return [
       { label: 'Télécharger', onClick: () => handleDownload(file) },
       { label: 'Retirer des favoris', onClick: () => handleRemoveFileFavorite(file) },
+      { label: 'Propriétés', onClick: () => setPropertiesTarget({ kind: 'file', file }) },
     ];
   }
 
@@ -185,7 +189,16 @@ export function SuivisPage() {
         </div>
       )}
 
-      {previewingFile && <FilePreviewModal file={previewingFile} onClose={() => setPreviewingFile(null)} />}
+      {previewingFile && (
+        <FilePreviewModal
+          file={previewingFile}
+          siblings={files}
+          onNavigate={setPreviewingFile}
+          onClose={() => setPreviewingFile(null)}
+        />
+      )}
+
+      {propertiesTarget && <PropertiesModal target={propertiesTarget} onClose={() => setPropertiesTarget(null)} />}
     </div>
   );
 }

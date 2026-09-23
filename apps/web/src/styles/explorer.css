@@ -533,11 +533,69 @@
 }
 
 .preview-modal__body {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 200px;
   overflow: auto;
+}
+
+.preview-modal__counter {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--color-ink-subtle);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.preview-modal__nav {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  transform: translateY(-50%);
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: 50%;
+  background: rgba(1, 1, 2, 0.6);
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.preview-modal__nav:hover {
+  background: var(--color-surface-3);
+}
+
+.preview-modal__nav--previous {
+  left: var(--space-sm);
+}
+
+.preview-modal__nav--next {
+  right: var(--space-sm);
+}
+
+.modal--properties {
+  max-width: 480px;
+}
+
+.properties {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: var(--space-sm) var(--space-md);
+  margin: 0;
+}
+
+.properties dt {
+  color: var(--color-ink-subtle);
+}
+
+.properties dd {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .preview-modal__image {

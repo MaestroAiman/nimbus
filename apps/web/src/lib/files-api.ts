@@ -39,6 +39,17 @@ export interface FolderContents {
   files: FileEntry[];
 }
 
+export interface FileProperties {
+  // Noms des dossiers parents, du premier sous la racine jusqu'au dossier qui contient le fichier.
+  path: string[];
+}
+
+export interface FolderProperties extends FileProperties {
+  sizeBytes: number;
+  fileCount: number;
+  folderCount: number;
+}
+
 function extractErrorMessage(body: unknown): string | undefined {
   if (typeof body !== 'object' || body === null || !('message' in body)) return undefined;
   const message = (body as { message: unknown }).message;
@@ -89,6 +100,14 @@ export function updateFolder(
   changes: { name?: string; parentId?: string | null; isFavorite?: boolean },
 ): Promise<Folder> {
   return request<Folder>(`/folders/${id}`, { method: 'PATCH', body: JSON.stringify(changes) });
+}
+
+export function getFolderProperties(id: string): Promise<FolderProperties> {
+  return request<FolderProperties>(`/folders/${id}/properties`);
+}
+
+export function getFileProperties(id: string): Promise<FileProperties> {
+  return request<FileProperties>(`/files/${id}/properties`);
 }
 
 export function deleteFolder(id: string): Promise<void> {
@@ -242,4 +261,34 @@ export function formatDate(value: string): string {
 
 export function formatDateTime(value: string): string {
   return new Date(value).toLocaleString('fr-FR');
+}
+
+// « lundi 21 septembre 2026, 15:59:56 », comme la fenetre Proprietes de Windows.
+export function formatDateLong(value: string): string {
+  return new Date(value).toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'medium' });
+}
+
+// « 489 Mo (512 868 975 octets) »
+export function formatExactSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} octets`;
+  return `${formatSize(bytes)} (${bytes.toLocaleString('fr-FR')} octets)`;
+}
+
+export function formatPath(path: string[]): string {
+  return ['Racine', ...path].join(' / ');
+}
+
+export function fileTypeLabel(mimeType: string, name: string): string {
+  const dot = name.lastIndexOf('.');
+  const extension = dot > 0 && dot < name.length - 1 ? name.slice(dot + 1).toLowerCase() : null;
+  const suffix = extension ? ` (.${extension})` : '';
+  const upper = extension ? ` ${extension.toUpperCase()}` : '';
+
+  if (mimeType === 'application/pdf') return `Document PDF${suffix}`;
+  if (mimeType === 'application/zip' || mimeType === 'application/x-zip-compressed') return `Dossier compressé${suffix}`;
+  if (mimeType.startsWith('image/')) return `Image${upper}${suffix}`;
+  if (mimeType.startsWith('video/')) return `Vidéo${upper}${suffix}`;
+  if (mimeType.startsWith('audio/')) return `Audio${upper}${suffix}`;
+  if (mimeType.startsWith('text/')) return `Document texte${suffix}`;
+  return `Fichier${upper}${suffix}`;
 }
