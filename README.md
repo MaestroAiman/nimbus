@@ -1,192 +1,100 @@
 # Nimbus
 
-Application web auto-hébergée de stockage de fichiers ("Google Drive personnel"), pensée pour tourner sur un serveur domestique à faibles ressources.
+> Un « Google Drive personnel » auto-hébergé, conçu pour tourner sur un vieux portable recyclé en serveur domestique (Intel i5 de 5ᵉ génération, 8 Go de RAM).
 
-## Structure du repo
+![NestJS](https://img.shields.io/badge/NestJS-12-E0234E?logo=nestjs&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Drizzle_ORM-4169E1?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![Nginx](https://img.shields.io/badge/Nginx-reverse_proxy-009639?logo=nginx&logoColor=white)
+
+<!-- Capture d'écran : ajouter docs/screenshots/explorer.png puis décommenter
+![Explorateur de fichiers Nimbus](docs/screenshots/explorer.png)
+-->
+
+## Pourquoi ce projet
+
+Stocker ses fichiers sur son propre matériel plutôt que chez un tiers, sans sacrifier le confort d'un vrai drive : explorateur, glisser-déposer, aperçus, corbeille, partage multi-utilisateurs. La contrainte forte est la machine cible : **tout le stack (base de données, API, frontend, proxy) doit tenir dans un budget mémoire d'environ 1 Go**.
+
+## Fonctionnalités
+
+- **Explorateur de fichiers** : arborescence de dossiers, création, renommage, déplacement (avec prévention des cycles), vue adaptée au mobile
+- **Upload en streaming** directement sur disque, sans charger le fichier en RAM, y compris l'**upload de dossiers entiers** avec leur arborescence
+- **Téléchargement** de fichiers, ou de dossiers complets sous forme d'archive ZIP générée à la volée
+- **Aperçu** des images et des PDF dans une visionneuse plein écran
+- **Corbeille** avec restauration, et **purge automatique** des éléments de plus de 7 jours (tâche planifiée)
+- **Favoris**, **journal d'activité**, **propriétés** des fichiers et dossiers, indicateur d'**espace disque**
+- **Authentification** par session (Better Auth), avec des **inscriptions soumises à validation** par un administrateur
+- **Espace d'administration** : ajout, modification, blocage et suppression d'utilisateurs, réinitialisation de mot de passe
+- **Isolation stricte** : un utilisateur ne peut ni voir, ni modifier, ni supprimer les données d'un autre (réponse 404)
+- Thème **clair / sombre** automatique
+
+## Architecture
+
+```mermaid
+flowchart LR
+    U[Navigateur] -->|HTTP :8080| N[Nginx<br/>frontend statique + reverse proxy]
+    N -->|/api/*| A[API NestJS<br/>Better Auth, Drizzle]
+    A --> P[(PostgreSQL<br/>métadonnées)]
+    A --> S[/Volume de stockage<br/>fichiers sur disque/]
+    M[Conteneur migrate<br/>one-shot] -.->|migrations Drizzle| P
+```
+
+- **Un seul point d'entrée** : Nginx sert le build React statique et proxifie `/api/*`. L'API n'est jamais exposée directement.
+- **Fichiers sur disque, métadonnées en base** : PostgreSQL ne stocke que le nom, la taille, le type et le chemin. Les contenus vivent dans un volume dédié.
+- **Budget mémoire par conteneur** (`mem_limit`) : Postgres 400 Mo, API 300 Mo, Nginx 64 Mo, avec un Postgres réglé pour une faible consommation.
+- **Build hors du serveur** : les images Docker sont construites sur le poste de développement puis transférées, la machine cible ne compile jamais rien.
+
+## Stack technique
+
+| Couche | Technologies |
+|---|---|
+| Backend | NestJS 12, TypeScript strict, Express 5, Better Auth (plugin admin), Drizzle ORM, class-validator, Joi (validation de l'environnement), `@nestjs/schedule`, archiver |
+| Frontend | React 19, Vite 8, React Router 7, client Better Auth, CSS vanilla avec design tokens |
+| Données | PostgreSQL, migrations SQL versionnées (Drizzle Kit) |
+| Infra | Docker Compose (dev et prod), Nginx, Tailscale pour l'accès distant, service systemd |
+| Qualité | Vitest (tests unitaires et e2e), oxlint |
+
+## Démarrage rapide (Docker)
+
+```bash
+git clone https://github.com/MaestroAiman/nimbus.git
+cd nimbus/infra
+cp .env.prod.example .env.prod   # mot de passe Postgres + BETTER_AUTH_SECRET (openssl rand -base64 32)
+docker compose --env-file .env.prod -p nimbus-prod -f docker-compose.prod.yml up -d --build
+```
+
+L'application est ensuite disponible sur **http://localhost:8080**. Au démarrage, Docker lance Postgres, puis les migrations, puis l'API et enfin le frontend, chacun avec un healthcheck.
+
+Pour développer sans Docker, avec rechargement à chaud : voir le [guide de développement](docs/developpement.md).
+
+## Tests
+
+```bash
+cd apps/api
+npm run test:all   # unitaires + e2e (nécessite Postgres démarré)
+```
+
+Les tests e2e couvrent le flux d'authentification complet, l'arborescence, l'upload d'un fichier de plusieurs dizaines de Mo, le téléchargement, le déplacement et la suppression, la prévention des cycles de dossiers, les transferts de dossiers et **l'isolation entre utilisateurs**.
+
+## Exploitation
+
+- **Healthchecks** : `GET /api/health`, plus un `HEALTHCHECK` Docker sur l'API et le frontend (redémarrage automatique si `unhealthy`)
+- **Sauvegardes** : `infra/scripts/backup.sh` (dump Postgres + archive du stockage, horodatés, avec rotation) et `infra/scripts/restore.sh`
+- **Déploiement sur le serveur domestique** (Xubuntu, Docker, Tailscale, systemd, swap) : [docs/deploiement-dell.md](docs/deploiement-dell.md)
+
+## Structure du dépôt
 
 ```
 nimbus/
 ├── apps/
-│   ├── api/   # Backend NestJS (TypeScript strict) + Dockerfile
-│   └── web/   # Frontend React + Vite + Dockerfile
-└── infra/     # Docker Compose (dev et prod) + infra/nginx/nginx.conf (reverse proxy unique, etape 10)
+│   ├── api/     # NestJS : auth, folders, files, trash, favorites, activity, storage
+│   └── web/     # React : explorateur, corbeille, suivis, compte, administration
+├── infra/       # docker-compose dev/prod, nginx, scripts de sauvegarde
+└── docs/        # guide de développement, procédure de déploiement
 ```
 
-## Prérequis
+---
 
-- Node.js ≥ 22
-- npm ≥ 10
-- Docker + Docker Compose (pour la base PostgreSQL locale)
-
-## Lancer le projet en local
-
-### Base de données (PostgreSQL, requis avant de lancer l'API)
-
-```bash
-cd infra
-docker compose -f docker-compose.dev.yml up -d
-```
-
-Démarre un PostgreSQL local (utilisateur/mot de passe/base : `nimbus`) sur le port `5432`, avec des réglages mémoire bas conformes aux contraintes du serveur cible (voir le fichier de suivi local).
-
-### Backend (`apps/api`)
-
-```bash
-cd apps/api
-cp .env.example .env
-npm install
-npm run start:dev
-```
-
-L'API démarre par défaut sur `http://localhost:3000`, se connecte à PostgreSQL au démarrage. Toutes les routes sont préfixées par `/api` (`app.setGlobalPrefix('api')`, étape 10). Healthcheck : `GET http://localhost:3000/api/health`.
-
-> Si `npm install` échoue avec l'erreur `Cannot read properties of null (reading 'edgesOut')`, c'est un bug connu de la résolution de dépendances d'npm (arborist) sur cette combinaison de paquets. Contournement : `npm install --legacy-peer-deps`. Pour la même raison, `npm ci` échoue aussi de façon fiable sur `apps/api` (deux versions d'`esbuild` coexistent dans l'arbre de dépendances, et npm n'écrit pas systématiquement l'entrée binaire optionnelle correspondante dans `package-lock.json`) : `apps/api/Dockerfile` utilise donc `npm install --legacy-peer-deps` plutôt que `npm ci`.
-
-#### Base de données : migrations et seed
-
-Une fois PostgreSQL démarré (voir ci-dessus) et les dépendances installées :
-
-```bash
-cd apps/api
-npm run db:migrate   # applique les migrations SQL (src/db/migrations) sur la base
-npm run db:seed       # insère un utilisateur de test (seed-test-user / test@nimbus.local)
-```
-
-Si le schéma (`src/db/schema/`) est modifié, régénérer la migration avec `npm run db:generate` avant de la rejouer avec `db:migrate`.
-
-#### Authentification (Better Auth)
-
-Endpoints exposés par Better Auth sous `/api/auth/*` (inscription, connexion, déconnexion, session) :
-
-```bash
-# Inscription
-curl -X POST http://localhost:3000/api/auth/sign-up/email \
-  -H "Content-Type: application/json" \
-  -d '{"email":"alice@nimbus.local","password":"correct-horse-battery","name":"Alice"}'
-
-# Connexion (récupère le cookie de session)
-curl -c cookies.txt -X POST http://localhost:3000/api/auth/sign-in/email \
-  -H "Content-Type: application/json" \
-  -d '{"email":"alice@nimbus.local","password":"correct-horse-battery"}'
-
-# Route protégée ("qui suis-je")
-curl -b cookies.txt http://localhost:3000/api/auth/me   # 200 avec la session
-curl http://localhost:3000/api/auth/me                   # 401 sans cookie
-
-# Déconnexion (nécessite un en-tête Origin, comme un vrai navigateur)
-curl -b cookies.txt -H "Origin: http://localhost:3000" -X POST http://localhost:3000/api/auth/sign-out
-```
-
-Ce flux complet (inscription/connexion/route protégée/refus sans session/déconnexion) est aussi couvert par un test automatisé : `apps/api/test/auth.e2e-spec.ts` (lancé via `npm run test:e2e`).
-
-#### Dossiers et fichiers
-
-Toutes les routes ci-dessous nécessitent le cookie de session obtenu après connexion (voir ci-dessus). Les fichiers sont stockés sur disque sous `STORAGE_PATH` (`./storage` en local par défaut, non versionné) — seule la métadonnée (nom, taille, type, chemin) est en base.
-
-```bash
-# Creer un dossier a la racine
-curl -b cookies.txt -X POST http://localhost:3000/api/folders \
-  -H "Content-Type: application/json" -d '{"name":"Documents"}'
-
-# Lister le contenu de la racine (folderId omis) ou d'un dossier (?parentId=<id>)
-curl -b cookies.txt http://localhost:3000/api/folders
-curl -b cookies.txt "http://localhost:3000/api/folders?parentId=<id-du-dossier>"
-
-# Renommer / deplacer un dossier (parentId: null pour remonter a la racine)
-curl -b cookies.txt -X PATCH http://localhost:3000/api/folders/<id> \
-  -H "Content-Type: application/json" -d '{"name":"Nouveau nom"}'
-
-# Uploader un fichier (streame directement sur le disque, sans buffering complet en RAM)
-curl -b cookies.txt -X POST http://localhost:3000/api/files \
-  -F "folderId=<id-du-dossier>" -F "file=@/chemin/vers/mon-fichier.pdf"
-
-# Telecharger
-curl -b cookies.txt -o fichier-telecharge.pdf http://localhost:3000/api/files/<id>/download
-
-# Deplacer / renommer / supprimer un fichier
-curl -b cookies.txt -X PATCH http://localhost:3000/api/files/<id> \
-  -H "Content-Type: application/json" -d '{"folderId":null}'
-curl -b cookies.txt -X DELETE http://localhost:3000/api/files/<id>
-```
-
-Un utilisateur ne peut ni voir, ni modifier, ni supprimer les dossiers/fichiers d'un autre utilisateur (404 sinon). Couverture automatisée : `apps/api/test/files-folders.e2e-spec.ts` (arborescence, upload d'un fichier de plusieurs dizaines de Mo, téléchargement, déplacement, suppression, prévention des cycles de dossiers, isolation entre utilisateurs).
-
-#### Tests (étape 11)
-
-```bash
-cd apps/api
-npm run test        # tests unitaires
-npm run test:e2e    # tests e2e (auth, dossiers/fichiers) — necessite Postgres demarre
-npm run test:all    # les deux, en une seule commande
-```
-
-### Frontend (`apps/web`)
-
-```bash
-cd apps/web
-cp .env.example .env
-npm install
-npm run dev
-```
-
-Le frontend démarre par défaut sur `http://localhost:5173`.
-
-Pages disponibles :
-- `/login`, `/register` — formulaires connectés à l'API Better Auth (voir ci-dessous), sans barre latérale
-- `/explorer` — protégée : redirige vers `/login` si aucune session valide ; navigation dans l'arborescence, création de dossier, envoi/téléchargement/renommage/suppression de fichiers et dossiers, câblés sur l'API réelle (étape 8)
-
-Système de CSS vanilla dans `apps/web/src/styles/` (`variables.css` pour les tokens de design, `reset.css`, `base.css`, `layout.css`, `explorer.css`), avec support clair/sombre automatique via `prefers-color-scheme`.
-
-#### Authentification côté frontend (étape 7)
-
-Le frontend utilise le client React de Better Auth (`apps/web/src/lib/auth-client.ts`, `baseURL` = `VITE_API_URL`). Important pour le développement local :
-
-- **CORS** : l'API (`apps/api/.env`) doit lister l'origine du frontend dans `CORS_ORIGIN` (séparées par des virgules si Vite change de port, ex. `http://localhost:5173,http://localhost:5174`). Sans ça, le navigateur bloque les requêtes cross-origin et les cookies de session ne circulent pas.
-- Les deux serveurs (API sur `:3000`, frontend sur `:5173`/`:5174`) doivent tourner en même temps pour que l'inscription/connexion fonctionnent réellement depuis l'UI.
-- Route protégée : `RequireAuth` (`apps/web/src/components/RequireAuth.tsx`) vérifie la session via `useSession()` et redirige vers `/login` si absente. Déconnexion via le bouton dans la barre latérale.
-
-### Lancer les deux en parallèle
-
-Ouvrir deux terminaux et lancer chaque commande `npm run start:dev` / `npm run dev` ci-dessus séparément.
-
-## Avec Docker (étape 9)
-
-Alternative à l'installation locale de Node : tout tourne en conteneurs. Deux fichiers compose dans `infra/`, chacun avec son propre nom de projet Docker (évite toute collision entre les deux) :
-
-### Développement (`docker-compose.dev.yml`, projet `nimbus-dev`)
-
-```bash
-cd infra
-docker compose -f docker-compose.dev.yml up -d
-```
-
-Démarre Postgres (déjà présent depuis l'étape 2), l'API (`http://localhost:3000`, hot-reload via `tsx watch`) et le frontend (`http://localhost:5173`, hot-reload via Vite HMR), avec le code source de `apps/api` et `apps/web` monté en volume — les modifications faites sur l'hôte sont prises en compte automatiquement. `CHOKIDAR_USEPOLLING` est activé côté conteneurs : sur Windows/Mac, les événements de système de fichiers natifs ne traversent pas toujours les bind mounts Docker Desktop, le polling est nécessaire pour que le rechargement fonctionne réellement (constaté en pratique lors de la mise en place — voir la note technique dans `apps/api/Dockerfile`, stage `dev`). Nécessite `apps/api/.env` et `apps/web/.env` (voir sections ci-dessus).
-
-Cette approche est un complément optionnel à `npm run start:dev` / `npm run dev` lancés directement sur l'hôte (toujours la voie la plus simple au quotidien) — utile pour développer sans installer Node localement, ou pour tester les Dockerfiles.
-
-### Production (`docker-compose.prod.yml`, projet `nimbus-prod`)
-
-Images figées (buildées ici, sur le PC de dev — jamais sur le futur serveur cible), limites mémoire actives par service selon le budget RAM documenté dans le fichier de suivi local (Postgres ~400 Mo, API ~300 Mo, Nginx ~64 Mo). Le frontend est un build Vite statique servi par Nginx (pas de serveur Node en prod).
-
-```bash
-cd infra
-cp .env.prod.example .env.prod   # renseigner un vrai mot de passe Postgres + BETTER_AUTH_SECRET (openssl rand -base64 32)
-docker compose --env-file .env.prod -p nimbus-prod -f docker-compose.prod.yml up -d --build
-```
-
-Ordre de démarrage géré automatiquement : Postgres → migrations Drizzle (conteneur `migrate`, one-shot, images buildées avec les devDependencies pour garder l'image `api` finale minimale) → API → `web`. Depuis l'étape 10, **`web` est l'unique point d'entrée** : un reverse proxy Nginx (`infra/nginx/nginx.conf`, monté dans le conteneur `web`) sert le frontend statique et proxifie `/api/*` vers l'API, qui n'est plus publiée directement sur l'hôte. Par défaut : tout est accessible sur `http://localhost:8080` (`WEB_PORT`).
-
-Pour arrêter et nettoyer : `docker compose --env-file .env.prod -p nimbus-prod -f docker-compose.prod.yml down` (ajouter `-v` pour supprimer aussi les volumes Postgres/stockage).
-
-## Déploiement sur le Dell (étape 10)
-
-Procédure complète (installation Docker, Tailscale, transfert d'images, service systemd, recommandations RAM/swap) : voir [`docs/deploiement-dell.md`](docs/deploiement-dell.md).
-
-## Monitoring et sauvegardes (étape 11)
-
-- **Healthcheck** : `GET /api/health`, plus un `HEALTHCHECK` Docker sur `api` et `web` (voir `docker-compose.prod.yml` — Docker relance automatiquement un conteneur `unhealthy`).
-- **Sauvegardes** : `infra/scripts/backup.sh` (dump Postgres + archive du volume de stockage, horodatés, rotation automatique) et `infra/scripts/restore.sh`. Détails et planification cron : voir [`docs/deploiement-dell.md`](docs/deploiement-dell.md#9-sauvegardes-étape-11).
-
-## État du projet
-
-Le développement suit une feuille de route par étapes (voir le fichier de suivi local, non versionné). Étape actuelle : **Étape 11 — Durcissement : tests, sauvegardes, monitoring léger** (dernière étape de la feuille de route initiale).
+Réalisé par [**Aiman**](https://github.com/MaestroAiman), élève ingénieur Data Science & Software Engineering à l'ENSIAS.
