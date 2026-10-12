@@ -506,8 +506,14 @@
 
 .explorer-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  /* ~6 cartes par ligne sur une largeur de contenu desktop courante, au lieu de ~8
+     avec l'ancien minimum de 150px (trop serre une fois les vignettes carrees). */
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 14px;
+  /* Sans ça, CSS Grid etire par defaut chaque carte a la hauteur de la plus haute de
+     sa ligne (ex. une carte dossier plus courte a cote de cartes fichier) : l'espace
+     en trop se retrouvait sous la vignette, qui n'a rien pour le combler. */
+  align-items: start;
 }
 
 .explorer-grid__item {
