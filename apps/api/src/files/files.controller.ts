@@ -66,6 +66,24 @@ export class FilesController {
     return new StreamableFile(stream);
   }
 
+  @Get(':id/thumbnail')
+  async thumbnail(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<StreamableFile> {
+    const thumbnail = await this.filesService.getThumbnail(user.id, id);
+
+    // Le fichier source n'est jamais remplace en place : la vignette mise en cache
+    // cote serveur pour cet id est donc immuable, d'ou le cache long cote navigateur.
+    response.set({
+      'Content-Type': 'image/jpeg',
+      'Cache-Control': 'private, max-age=31536000, immutable',
+    });
+
+    return new StreamableFile(thumbnail);
+  }
+
   @Get(':id/properties')
   properties(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.filesService.getProperties(user.id, id);
