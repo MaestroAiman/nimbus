@@ -8,6 +8,7 @@
 
 .explorer__breadcrumb {
   display: flex;
+  align-items: center;
   gap: var(--space-xs);
   color: var(--color-ink-subtle);
   font-size: var(--font-size-sm);
@@ -26,6 +27,51 @@
 .explorer__breadcrumb-link:hover {
   color: var(--color-ink);
   text-decoration: underline;
+}
+
+/* Colonne de droite de l'en-tete : la rangee de boutons d'action, puis en dessous
+   (aligne a droite, sous "Nouveau dossier") les fleches de navigation. */
+.explorer__header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-xs);
+}
+
+.explorer__nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.explorer__nav-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink-subtle);
+  cursor: pointer;
+}
+
+.explorer__nav-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.explorer__nav-button:hover:not(:disabled) {
+  background: var(--color-surface-3);
+  color: var(--color-ink);
+}
+
+.explorer__nav-button:disabled {
+  color: var(--color-ink-tertiary);
+  opacity: 0.4;
+  cursor: default;
 }
 
 .explorer__actions {

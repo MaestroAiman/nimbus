@@ -104,8 +104,9 @@
     min-width: 0;
   }
 
-  .explorer__header > div:first-child + .explorer__actions {
+  .explorer__header > div:first-child + .explorer__header-right {
     flex: 1 1 100%;
+    align-items: stretch;
   }
 
   .explorer__actions {

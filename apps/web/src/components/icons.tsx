@@ -294,6 +294,14 @@ export function IconChevronRight(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconChevronUp(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon strokeWidth="1.9" {...props}>
+      <polyline points="18 15 12 9 6 15"></polyline>
+    </Icon>
+  );
+}
+
 export function IconCamera(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>

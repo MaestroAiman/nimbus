@@ -3,6 +3,9 @@ import { ActionsMenu, type MenuAction } from '../components/ActionsMenu';
 import { FilePreviewModal } from '../components/FilePreviewModal';
 import { FileThumbnail } from '../components/FileThumbnail';
 import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconChevronUp,
   IconClose,
   IconFile,
   IconFolder,
@@ -59,10 +62,17 @@ type ViewMode = 'list' | 'grid';
 
 const ROOT_CRUMB: Crumb = { id: null, name: 'Racine' };
 
+interface NavState {
+  // Historique façon navigateur : chaque entrée est un chemin complet (breadcrumb) visité.
+  history: Crumb[][];
+  index: number;
+}
+
 export function ExplorerPage() {
   const isMobile = useIsMobile();
   const [isChoosingUpload, setIsChoosingUpload] = useState(false);
-  const [breadcrumb, setBreadcrumb] = useState<Crumb[]>([ROOT_CRUMB]);
+  const [nav, setNav] = useState<NavState>({ history: [[ROOT_CRUMB]], index: 0 });
+  const breadcrumb = nav.history[nav.index];
   const [folders, setFolders] = useState<Folder[]>([]);
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -139,13 +149,41 @@ export function ExplorerPage() {
     };
   }, [moving, pickerFolderId]);
 
+  // Point d'entree unique de toute navigation (ouvrir un dossier, cliquer un segment du
+  // fil d'Ariane, remonter au parent) : tronque l'historique "suivant" comme le ferait
+  // un navigateur, puis ajoute la nouvelle entree.
+  function navigateTo(newBreadcrumb: Crumb[]) {
+    setNav((prev) => ({
+      history: [...prev.history.slice(0, prev.index + 1), newBreadcrumb],
+      index: prev.index + 1,
+    }));
+  }
+
   function openFolder(folder: Folder) {
-    setBreadcrumb((prev) => [...prev, { id: folder.id, name: folder.name }]);
+    navigateTo([...breadcrumb, { id: folder.id, name: folder.name }]);
   }
 
   function goToCrumb(index: number) {
-    setBreadcrumb((prev) => prev.slice(0, index + 1));
+    navigateTo(breadcrumb.slice(0, index + 1));
   }
+
+  // "Dossier parent" est une navigation comme une autre (pas un retour dans
+  // l'historique) : comportement standard façon Explorateur, Haut ≠ Precedent.
+  function goUp() {
+    if (breadcrumb.length > 1) navigateTo(breadcrumb.slice(0, -1));
+  }
+
+  function goBack() {
+    setNav((prev) => (prev.index > 0 ? { ...prev, index: prev.index - 1 } : prev));
+  }
+
+  function goForward() {
+    setNav((prev) => (prev.index < prev.history.length - 1 ? { ...prev, index: prev.index + 1 } : prev));
+  }
+
+  const canGoBack = nav.index > 0;
+  const canGoForward = nav.index < nav.history.length - 1;
+  const canGoUp = breadcrumb.length > 1;
 
   function handleCreateFolder(event: FormEvent) {
     event.preventDefault();
@@ -426,7 +464,8 @@ export function ExplorerPage() {
             ))}
           </div>
         </div>
-        <div className="explorer__actions">
+        <div className="explorer__header-right">
+          <div className="explorer__actions">
           <div className="segmented-control">
             <button
               type="button"
@@ -487,6 +526,36 @@ export function ExplorerPage() {
             <IconNewFolder />
             <span className="button__label">Nouveau dossier</span>
           </button>
+          </div>
+          <div className="explorer__nav">
+            <button
+              type="button"
+              className="explorer__nav-button"
+              onClick={goBack}
+              disabled={!canGoBack}
+              aria-label="Dossier précédent"
+            >
+              <IconChevronLeft />
+            </button>
+            <button
+              type="button"
+              className="explorer__nav-button"
+              onClick={goForward}
+              disabled={!canGoForward}
+              aria-label="Dossier suivant"
+            >
+              <IconChevronRight />
+            </button>
+            <button
+              type="button"
+              className="explorer__nav-button"
+              onClick={goUp}
+              disabled={!canGoUp}
+              aria-label="Dossier parent"
+            >
+              <IconChevronUp />
+            </button>
+          </div>
         </div>
       </div>
 
