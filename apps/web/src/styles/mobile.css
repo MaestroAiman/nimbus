@@ -331,6 +331,18 @@
     gap: 8px;
   }
 
+  /* Les cartes fichier restent en-tete + vignette carree pleine largeur sur mobile :
+     on annule le padding/gap generique ci-dessus (meme regle plus specifique que celle
+     d'explorer.css, elle gagnerait sinon sur l'ordre des fichiers). */
+  .explorer-grid__item--file {
+    padding: 0;
+    gap: 0;
+  }
+
+  .explorer-grid__header {
+    padding: 8px 32px 6px 10px;
+  }
+
   .explorer-grid__item:hover {
     border-color: var(--color-hairline);
   }

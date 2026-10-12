@@ -22,6 +22,14 @@
   --color-danger-hover: #ff9d9d;
   --color-warning: #f5a623;
 
+  /* Badges de type de fichier (aperçu non disponible) */
+  --color-badge-pdf: #ef5350;
+  --color-badge-psd: #2f80ed;
+  --color-badge-ai: #ff8a3d;
+  --color-badge-raw: #a07ef5;
+  --color-badge-image: #34b36a;
+  --color-badge-other: #6b7280;
+
   /* Typographie */
   --font-sans: 'Inter', -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
   --font-size-sm: 13px;

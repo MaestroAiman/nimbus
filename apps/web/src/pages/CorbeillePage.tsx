@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActionsMenu, type MenuAction } from '../components/ActionsMenu';
 import { ConfirmModal } from '../components/ConfirmModal';
-import { IconFile, IconFolder, IconTrash } from '../components/icons';
+import { FileThumbnail } from '../components/FileThumbnail';
+import { IconFolder, IconTrash } from '../components/icons';
 import { RowName } from '../components/RowName';
 import {
   type FileEntry,
@@ -182,7 +183,7 @@ export function CorbeillePage() {
                   <td className="cell-name">
                     <span className="explorer-row__name">
                       <RowName
-                        icon={<IconFile className="explorer-row__icon" />}
+                        icon={<FileThumbnail file={file} variant="row" />}
                         name={file.name}
                         meta={`${formatSize(file.sizeBytes)} · Supprimé le ${file.deletedAt ? formatDate(file.deletedAt) : '—'} · Purge le ${purgeDate(file.deletedAt)}`}
                       />

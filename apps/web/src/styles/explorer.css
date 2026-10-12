@@ -354,6 +354,127 @@
   flex-shrink: 0;
 }
 
+/* Vignettes de fichiers (image reelle ou vignette RAW/HEIC generee) et badges de
+   type (PDF, PSD, AI, extension...) affiches a la place quand aucun rendu n'est
+   possible — voir FileThumbnail. */
+.file-thumb {
+  display: block;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--color-surface-2);
+}
+
+.file-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.file-thumb--row,
+.file-badge--row {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+}
+
+.file-badge--row {
+  font-size: 7px;
+  letter-spacing: -0.02em;
+}
+
+.file-thumb--grid,
+.file-badge--grid {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 0;
+}
+
+.file-badge--grid {
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.file-badge--fallback {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+
+/* Vraies icones de format (PSD/AI/PDF, voir FormatBadge) : la "page" colorée porte deja
+   son propre fond, seul le conteneur a besoin d'etre dimensionne/centre. */
+.file-format-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.file-format-icon--row {
+  width: 26px;
+  height: 26px;
+}
+
+.file-format-icon--row svg {
+  width: auto;
+  height: 22px;
+}
+
+.file-format-icon--grid {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--color-surface-2);
+}
+
+.file-format-icon--grid svg {
+  /* Largeur en % (pas hauteur) : la hauteur du conteneur vient de aspect-ratio, un
+     enfant en hauteur-% y cree une dependance circulaire que certains moteurs
+     resolvent mal (l'icone gonflait la carte). Le ratio de l'icone (72x96) donne
+     ~52% de hauteur visuelle equivalente pour 39% de largeur. */
+  width: 39%;
+  height: auto;
+}
+
+.file-format-icon--fallback {
+  width: 96px;
+  height: 96px;
+}
+
+.file-format-icon--fallback svg {
+  width: auto;
+  height: 84px;
+}
+
+.file-badge--pdf {
+  background: var(--color-badge-pdf);
+}
+
+.file-badge--psd {
+  background: var(--color-badge-psd);
+}
+
+.file-badge--ai {
+  background: var(--color-badge-ai);
+}
+
+.file-badge--raw {
+  background: var(--color-badge-raw);
+}
+
+.file-badge--image {
+  background: var(--color-badge-image);
+}
+
+.file-badge--other {
+  background: var(--color-badge-other);
+}
+
 .explorer-row__actions {
   display: flex;
   gap: 18px;
@@ -415,6 +536,26 @@
 
 .explorer-grid__item svg {
   color: var(--color-ink-subtle);
+}
+
+/* Cartes fichier : en-tete compact (nom + taille) au-dessus d'une vignette carree
+   pleine largeur, façon Google Drive — a la difference des cartes dossier qui gardent
+   l'icone centree. `overflow: hidden` fait que la vignette carree herite des coins
+   arrondis de la carte sans avoir besoin de son propre border-radius. */
+.explorer-grid__item--file {
+  padding: 0;
+  gap: 0;
+  align-items: stretch;
+  text-align: left;
+  overflow: hidden;
+}
+
+.explorer-grid__header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* Padding droit genereux : laisse la place au bouton d'actions (menu) en overlay. */
+  padding: 10px 36px 8px 12px;
 }
 
 .explorer-grid__name {
@@ -623,5 +764,18 @@
 
 .preview-modal__message {
   color: var(--color-ink-subtle);
+  text-align: center;
+}
+
+.preview-modal__raw {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.preview-modal__raw-note {
+  color: var(--color-ink-subtle);
+  font-size: var(--font-size-sm);
   text-align: center;
 }

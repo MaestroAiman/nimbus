@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActionsMenu, type MenuAction } from '../components/ActionsMenu';
 import { FilePreviewModal } from '../components/FilePreviewModal';
-import { IconFile, IconFolder, IconStar } from '../components/icons';
+import { FileThumbnail } from '../components/FileThumbnail';
+import { IconFolder, IconStar } from '../components/icons';
 import { PropertiesModal, type PropertiesTarget } from '../components/PropertiesModal';
 import { RowName } from '../components/RowName';
 import {
@@ -164,7 +165,7 @@ export function SuivisPage() {
                       onClick={() => setPreviewingFile(file)}
                     >
                       <RowName
-                        icon={<IconFile className="explorer-row__icon" />}
+                        icon={<FileThumbnail file={file} variant="row" />}
                         name={file.name}
                         meta={`${formatSize(file.sizeBytes)} · ${formatDate(file.updatedAt)}`}
                       />

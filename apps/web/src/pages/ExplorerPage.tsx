@@ -1,6 +1,7 @@
 import { type ChangeEvent, type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { ActionsMenu, type MenuAction } from '../components/ActionsMenu';
 import { FilePreviewModal } from '../components/FilePreviewModal';
+import { FileThumbnail } from '../components/FileThumbnail';
 import {
   IconClose,
   IconFile,
@@ -621,7 +622,7 @@ export function ExplorerPage() {
                         onClick={() => setPreviewingFile(file)}
                       >
                         <RowName
-                          icon={<IconFile className="explorer-row__icon" />}
+                          icon={<FileThumbnail file={file} variant="row" />}
                           name={file.name}
                           meta={`${formatSize(file.sizeBytes)} · ${formatDate(file.updatedAt)}`}
                         />
@@ -718,7 +719,7 @@ export function ExplorerPage() {
             ) : (
               <div
                 key={file.id}
-                className="explorer-grid__item"
+                className="explorer-grid__item explorer-grid__item--file"
                 role="button"
                 tabIndex={0}
                 onClick={() => setPreviewingFile(file)}
@@ -739,9 +740,11 @@ export function ExplorerPage() {
                     title={file.name}
                   />
                 </div>
-                <IconFile width={28} height={28} strokeWidth={1.3} />
-                <span className="explorer-grid__name">{file.name}</span>
-                <span className="explorer-grid__meta">{formatSize(file.sizeBytes)}</span>
+                <div className="explorer-grid__header">
+                  <span className="explorer-grid__name">{file.name}</span>
+                  <span className="explorer-grid__meta">{formatSize(file.sizeBytes)}</span>
+                </div>
+                <FileThumbnail file={file} variant="grid" />
               </div>
             ),
           )}

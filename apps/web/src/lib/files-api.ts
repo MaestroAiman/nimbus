@@ -284,6 +284,13 @@ export function fileTypeLabel(mimeType: string, name: string): string {
   const suffix = extension ? ` (.${extension})` : '';
   const upper = extension ? ` ${extension.toUpperCase()}` : '';
 
+  // Formats exotiques dont le mimeType envoyé par le navigateur est peu fiable
+  // (souvent application/octet-stream) : on se base sur l'extension.
+  if (extension === 'psd') return `Image Photoshop${suffix}`;
+  if (extension === 'ai') return `Image Illustrator${suffix}`;
+  if (extension === 'arw') return `Image RAW${suffix}`;
+  if (extension === 'heic' || extension === 'heif') return `Image HEIC${suffix}`;
+
   if (mimeType === 'application/pdf') return `Document PDF${suffix}`;
   if (mimeType === 'application/zip' || mimeType === 'application/x-zip-compressed') return `Dossier compressé${suffix}`;
   if (mimeType.startsWith('image/')) return `Image${upper}${suffix}`;
